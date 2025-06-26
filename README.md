@@ -1,9 +1,3 @@
-
-
-Comando usado para generar el instalador
-nuitka cli.py --standalone --mingw64 --output-dir=build --include-data-files=grafo_villa_pesqueira.graphml=grafo_villa_pesqueira.graphml --enable-plugin=tk-inter
-
-
 # 🚗 RutaCraftOSM(Calculadora de Rutas con OSM)
 
 RutaCraftOSM es una herramienta basada en Python que permite calcular rutas óptimas entre múltiples puntos GPS utilizando grafos de calles extraídos de OpenStreetMap (OSM). Utiliza algoritmos eficientes de búsqueda (como A*), y genera instrucciones de navegación similares a las de un GPS: giros, distancias y nombres de calles.
