@@ -1,0 +1,9 @@
+# Ignorar binarios y carpetas de compilación
+build/
+*.exe
+*.dist
+*.build
+__pycache__
+cache
+nuitka-crash-report.xml
+resultado_ruta.json
