@@ -16,6 +16,10 @@ RutaCraftOSM es una herramienta basada en Python que permite calcular rutas ópt
 Perfecto para sistemas de logística, movilidad, demostraciones educativas o integraciones con herramientas como Electron, React o plataformas web.
 ---
 
+## Ejemplo de generacion 
+
+![alt text](image.png)
+
 ## 📁 Estructura del Proyecto
 
 ```bash
