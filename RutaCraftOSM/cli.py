@@ -1,13 +1,18 @@
-# cli.py
+# cli.py (modificado para usar el nuevo core basado en lista de adyacencia)
 import json
 import argparse
 import os
 import sys
-from Rutas_Auto_Generadas_OSM.RutaCraftOSM.core import (
-    cargar_grafo_desde_archivo,
-    construir_ruta_con_aproximacion,
-    calcular_instrucciones_con_calles
+from core import (
+    cargar_lista_adyacencia,
+    cargar_cache,
+    guardar_cache,
+    construir_ruta_con_lista,
+    calcular_instrucciones
 )
+
+import time
+
 
 def cargar_puntos(path):
     print(f">>> Puntos GPS recibidos: {path}")
@@ -23,19 +28,16 @@ def cargar_puntos(path):
         sys.exit(1)
 
 def main():
-    print(">>> Iniciando ejecución del script CLI")
-    parser = argparse.ArgumentParser(description="Calcular ruta entre puntos GPS usando un grafo OSM")
-    parser.add_argument('--grafo', required=False, help="Ruta al archivo .graphml (opcional, usa uno por defecto empacado)")
-    parser.add_argument('--puntos', required=False, help="Ruta a un archivo JSON con puntos GPS o string JSON")
+    parser = argparse.ArgumentParser(description="Calcular ruta entre puntos GPS usando lista de adyacencia")
+    parser.add_argument('--grafo', default="grafo_mazatan_villapesqueira.pkl", help="Archivo .pkl con grafo de adyacencia")
+    parser.add_argument('--puntos', help="Ruta a un archivo JSON con puntos GPS o string JSON")
     parser.add_argument('--array', nargs='+', type=float, help="Lista de lat lon intercalados. Ej: lat1 lon1 lat2 lon2 ...")
     parser.add_argument('--salida', help="Ruta del archivo JSON de salida")
     parser.add_argument('--stdout', action='store_true', help="Imprimir resultado en consola")
 
     args = parser.parse_args()
 
-    # -------------------------------------
-    # 🧭 Cargar puntos GPS
-    # -------------------------------------
+    # Cargar puntos GPS
     if args.array:
         if len(args.array) % 2 != 0:
             print("❌ Error: cantidad impar de coordenadas en --array")
@@ -54,13 +56,16 @@ def main():
         print("❌ Error: debes proporcionar los puntos GPS con --array o --puntos")
         sys.exit(1)
 
-    # -------------------------------------
-    # 🗺️  Cargar grafo y calcular ruta
-    # -------------------------------------
-    G = cargar_grafo_desde_archivo(args.grafo)
-    ruta_nodos, conexiones_verdes = construir_ruta_con_aproximacion(G, puntos_gps)
-    ruta_coords = [(G.nodes[n]['y'], G.nodes[n]['x']) for n in ruta_nodos]
-    instrucciones, distancia_total = calcular_instrucciones_con_calles(G, ruta_nodos)
+    # Cargar grafo y cache
+    #print(f">>> Cargando grafo desde: {args.grafo}")
+    adj_list, coords = cargar_lista_adyacencia(args.grafo)
+    cache = cargar_cache()
+
+    # Calcular ruta
+    #print(f">>> Calculando ruta entre {len(puntos_gps)} puntos GPS")
+    ruta_nodos, conexiones_verdes = construir_ruta_con_lista(adj_list, coords, puntos_gps, cache)
+    ruta_coords = [coords[n] for n in ruta_nodos]
+    instrucciones, distancia_total = calcular_instrucciones(coords, ruta_nodos)
 
     resultado = {
         "puntos_gps": puntos_gps,
@@ -70,9 +75,8 @@ def main():
         "instrucciones": instrucciones
     }
 
-    # -------------------------------------
-    # 📤 Exportar resultados
-    # -------------------------------------
+    guardar_cache(cache)
+
     if args.salida:
         try:
             with open(args.salida, 'w', encoding='utf-8') as f:
@@ -85,4 +89,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 

@@ -7,3 +7,12 @@ __pycache__
 cache
 nuitka-crash-report.xml
 resultado_ruta.json
+
+#ignorar  de ruta-craft-osm
+node_modules/
+dist/
+package-lock.json
+
+#Carpeta de caché de rutas
+cache_rutas/
+grafos/

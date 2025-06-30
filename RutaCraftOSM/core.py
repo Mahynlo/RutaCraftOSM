@@ -1,155 +1,151 @@
-import math
-import sys
+import pickle
 import os
-import networkx as nx
-import osmnx as ox
-from geopy.distance import geodesic
-
+import heapq
+from math import radians, cos, sin, asin, sqrt, atan2, degrees
 
 # =========================
-# |      FUNCIONES        |
+# | FUNCIONES UTILITARIAS |
 # =========================
 
-def heuristica_geodesica(u, v, G):
-    """Calcula la distancia geodésica entre dos nodos del grafo G.
+def haversine(coord1, coord2):
+    lat1, lon1 = coord1
+    lat2, lon2 = coord2
+    R = 6371000  # Radio de la Tierra en metros
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
+    return R * 2 * asin(sqrt(a))
 
-    Args:
-        u (_type_): Esta es la instancia del nodo de origen en el grafo G.
-        v (_type_): Esta es la instancia del nodo de destino en el grafo G.
-        G (_type_): Esta es la instancia del grafo de OSMnx que contiene los nodos y sus coordenadas.
+def angulo(a, b):
+    return degrees(atan2(b[1] - a[1], b[0] - a[0]))
 
-    Returns:
-        _type_:   Devuelve la distancia geodésica entre los nodos u y v en metros.
-    """
-    lat1, lon1 = G.nodes[u]['y'], G.nodes[u]['x']
-    lat2, lon2 = G.nodes[v]['y'], G.nodes[v]['x']
+def buscar_nodo_mas_cercano(coords, lat, lon):
+    """Busca el nodo más cercano a una coordenada GPS"""
+    return min(coords, key=lambda n: haversine((lat, lon), coords[n]))
+
+# =========================
+# | CARGA DE DATOS        |
+# =========================
+
+def cargar_lista_adyacencia(path="grafo_mazatan_villapesqueira.pkl"):
+    """Carga archivo .pkl con (adj_list, coords)"""
     
-    return geodesic((lat1, lon1), (lat2, lon2)).meters
+    #se carga el grafo de la carpeta grafos/ con el nombre dado o por defecto grafo_mazatan_villapesqueira.pkl que debe estar en esa carpeta
+    
+    if not os.path.exists(path):
+        print(f"❌ Error: El archivo '{path}' no existe. Asegúrate de haberlo generado previamente.")
+        print(path)
+        return {}, {}
+    print(f"🔄 Cargando lista de adyacencia desde '{path}'...")
+    # se carga el archivo pickle
+    with open(path, "rb") as f:
+        return pickle.load(f)
 
-def cargar_grafo_desde_archivo(path=None): #si  no se especifica, usa el grafo por defecto 
-    print(f">>> Cargando grafo desde: {path}")
-    """Carga el grafo desde un archivo GraphML y lo convierte a no dirigido.
+def cargar_cache(path="cache_rutas.pkl"):
+    # se carga de la carpeta cache_rutas/ el archivo cache_rutas.pkl
+    path = os.path.join("cache_rutas", path)  # ruta completa del archivo pickle
+    
+    return pickle.load(open(path, "rb")) if os.path.exists(path) else {}
 
-    Args:
-        path (str, optional):  Ruta al archivo GraphML. Defaults to "grafo_villa_pesqueira.graphml".
+def guardar_cache(cache, path="cache_rutas.pkl"):
+    # se crea la carpeta cons el nomnre cache_rutas/ con el nombre dado o por defecto cache_rutas.pkl
+    path = os.path.join("cache_rutas", path)  # ruta completa del archivo
+    if not os.path.exists(os.path.dirname(path)):
+        print(f"🔄 Creando carpeta para cache: {os.path.dirname(path)}")
+    #si de existe la carpeta "cache_rutas", la crea
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        pickle.dump(cache, f)
 
-    Returns:
-        _type_:  Grafo de OSMnx cargado y convertido a no dirigido.
-    """
-    if path:
-        final_path = path
-    else:
-        grafo_por_defecto = "grafo_villa_pesqueira.graphml"
-        # Detectar si está ejecutándose desde PyInstaller
-        if getattr(sys, 'frozen', False):
-            base_path = sys._MEIPASS
-        else:
-            base_path = os.path.abspath(".")
+# =========================
+# | A* CON CACHÉ          |
+# =========================
 
-        final_path = os.path.join(base_path, grafo_por_defecto)
+def astar_lista_adyacencia(adj_list, coords, origen, destino, cache):
+    clave = (origen, destino)
+    if clave in cache:
+        return cache[clave]
 
-    print(f">>> Cargando grafo desde: {final_path}")
-    G = ox.load_graphml(final_path)
-    G = G.to_undirected()
-    return G
+    open_set = [(0, 0, origen)] # se almacena la tupla (f_score, counter, nodo)
+    came_from = {} # para reconstruir el camino
+    g_score = {origen: 0} # costo desde el origen hasta el nodo actual
+    counter = 1 # contador para mantener el orden de inserción en el heap
 
+    while open_set:
+        _, _, actual = heapq.heappop(open_set)
 
-def construir_ruta_con_aproximacion(G, puntos_gps, max_dist_fuera_calle=10):
-    print(f">>> Construyendo ruta aproximada entre {len(puntos_gps)} puntos GPS")
-    """Calcula una ruta aproximada entre puntos GPS dados, utilizando el grafo de OSMnx.
+        if actual == destino: # hemos llegado al destino
+            path = [] # reconstruir el camino
+            while actual in came_from: # hay un camino hacia atrás
+                path.append(actual)
+                actual = came_from[actual]
+            path.append(origen)
+            ruta = path[::-1]
+            cache[clave] = ruta
+            return ruta
 
-    Args:
-        G (_type_):  Grafo de OSMnx que representa la red vial.
-        puntos_gps (_type_):  Lista de tuplas con coordenadas GPS (latitud, longitud).
-        max_dist_fuera_calle (int, optional):   Distancia máxima permitida fuera de la calle para considerar un punto GPS. Defaults to 10.
+        for vecino, peso in adj_list.get(actual, []):
+            tentative_g = g_score[actual] + peso
+            if tentative_g < g_score.get(vecino, float("inf")):
+                came_from[vecino] = actual
+                g_score[vecino] = tentative_g
+                f_score = tentative_g + haversine(coords[vecino], coords[destino])
+                heapq.heappush(open_set, (f_score, counter, vecino))
+                counter += 1
 
-    Returns:
-        _type_:   Una tupla con dos elementos:
-            - Una lista de nodos que componen la ruta aproximada.
-            - Una lista de conexiones verdes (puntos GPS que están fuera de la calle).
-    """
-    nodos = []
+    return []
+
+# =========================
+# | CONSTRUCCIÓN DE RUTA  |
+# =========================
+
+def construir_ruta_con_lista(adj_list, coords, puntos_gps, cache, max_dist=10):
     conexiones_verdes = []
     ruta_nodos = []
+    nodos = []
 
-    for i, punto in enumerate(puntos_gps):
-        nodo_cercano = ox.distance.nearest_nodes(G, punto[1], punto[0])
-        nodo_coord = (G.nodes[nodo_cercano]['y'], G.nodes[nodo_cercano]['x'])
-        distancia = geodesic(punto, nodo_coord).meters
+    for lat, lon in puntos_gps:
+        nodo_cercano = buscar_nodo_mas_cercano(coords, lat, lon)
+        coord = coords[nodo_cercano]
+        if haversine(coord, (lat, lon)) > max_dist:
+            conexiones_verdes.append((coord, (lat, lon)))
         nodos.append(nodo_cercano)
 
-        if i > 0:
-            try:
-                segmento = nx.astar_path(
-                    G,
-                    nodos[i - 1],
-                    nodos[i],
-                    heuristic=lambda u, v: heuristica_geodesica(u, v, G),
-                    weight="length"
-                )
-                if i == 1:
-                    ruta_nodos.extend(segmento)
-                else:
-                    ruta_nodos.extend(segmento[1:])
-            except nx.NetworkXNoPath:
-                print(f"No hay ruta entre {nodos[i-1]} y {nodos[i]}")
-
-        if distancia > max_dist_fuera_calle:
-            conexiones_verdes.append((nodo_coord, punto))
+    for i in range(1, len(nodos)):
+        segmento = astar_lista_adyacencia(adj_list, coords, nodos[i - 1], nodos[i], cache)
+        if not segmento:
+            print(f"❌ No se encontró ruta entre {nodos[i - 1]} y {nodos[i]}")
+        ruta_nodos.extend(segmento if i == 1 else segmento[1:])
 
     return ruta_nodos, conexiones_verdes
 
+# =========================
+# | INSTRUCCIONES         |
+# =========================
 
-
-def calcular_instrucciones_con_calles(G, ruta_nodos):
-    print(f">>> Calculando instrucciones para la ruta de {len(ruta_nodos)} nodos")
-    """Calcula las instrucciones de la ruta dada una lista de nodos.
-
-    Args:
-        G (_type_): Grafo de OSMnx en formato no dirigido
-        ruta_nodos (_type_):  Lista de nodos que componen la ruta
-
-    Returns:
-        _type_: Instrucciones de la ruta y distancia total
-    """
+def calcular_instrucciones(coords, ruta_nodos):
     instrucciones = []
     distancia_total = 0
-
-    def angulo(a, b):
-        return math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
-
     anterior = None
+
     for i in range(1, len(ruta_nodos) - 1):
         u, v, w = ruta_nodos[i - 1], ruta_nodos[i], ruta_nodos[i + 1]
-        coord_u = (G.nodes[u]['y'], G.nodes[u]['x'])
-        coord_v = (G.nodes[v]['y'], G.nodes[v]['x'])
-        coord_w = (G.nodes[w]['y'], G.nodes[w]['x'])
-
-        dist = geodesic(coord_v, coord_w).meters
+        coord_u, coord_v, coord_w = coords[u], coords[v], coords[w]
+        dist = haversine(coord_v, coord_w)
         distancia_total += dist
-
         ang1 = angulo(coord_u, coord_v)
         ang2 = angulo(coord_v, coord_w)
         giro = (ang2 - ang1 + 360) % 360
 
-        if giro < 30 or giro > 330:
-            accion = "Sigue recto"
-        elif giro < 180:
-            accion = "Gira a la derecha"
-        else:
-            accion = "Gira a la izquierda"
+        accion = ( # determinar la acción según el giro
+            "Sigue recto" if giro < 30 or giro > 330
+            else "Gira a la derecha" if giro < 180
+            else "Gira a la izquierda"
+        )
 
-        nombre_calle = "calle sin nombre"
-        edge_data = G.get_edge_data(v, w) or G.get_edge_data(w, v)
-        if edge_data:
-            for key in edge_data:
-                nombre_calle = edge_data[key].get("name", "calle sin nombre")
-                if nombre_calle != "calle sin nombre":
-                    break
-
-        actual = {
+        actual = { # instrucción actual 
             "accion": accion,
-            "calle": nombre_calle,
+            "calle": "desconocida",
             "desde": coord_v,
             "hacia": coord_w,
             "distancia_m": round(dist, 1)
