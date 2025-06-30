@@ -25,7 +25,7 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<ResultadoRut
         return Promise.reject(new Error("❌ Debes proporcionar 'options.puntos' como un array de coordenadas [lat, lon]"));
     }
 
-    const exePath = path.join(__dirname, "..", "bin", "cli.dist", "cli.exe");
+    const exePath = path.join(__dirname, "..", "bin", "cli", "cli.exe");
 
     const args: string[] = [
         "--stdout",
