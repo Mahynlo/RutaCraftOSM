@@ -1,6 +1,9 @@
+const fs = require("fs");
+const path = require("path");
 const { calcularRuta } = require("../dist/index.js");
 
 async function test() {
+  console.log("🚀 Iniciando test de calcularRuta...");
   console.time("⏱ Tiempo de ejecución de calcularRuta");
 
   try {
@@ -30,20 +33,42 @@ async function test() {
         [29.118406, -109.963166],
         [29.118781, -109.963116]
       ],
-      grafo: "grafos/grafo_mazatan_villapesqueira.pkl",
+      // grafo: "grafo_mazatan_villapesqueira.pkl",
+      // saveCache: false,
+      cachePath: "./cache_resultado.json",
     });
 
-    console.timeEnd("⏱ Tiempo de ejecución de calcularRuta");
+    if (!resultado || !resultado.resultado || !resultado.resultado.ruta || resultado.resultado.ruta.length === 0) {
+      //console.error("❌ Resultado completo:", resultado);
+      throw new Error("Resultado inválido: la ruta está vacía");
+    }
+
 
     console.log("✅ Resultado recibido:");
-    console.log(JSON.stringify(resultado, null, 2));
+    console.log(JSON.stringify(resultado.resultado, null, 2));
+
+    // Guardar cache en JSON
+    if (resultado.cache) {
+      const cacheFilePath = path.join(__dirname, "cache_resultado.json");
+      fs.writeFileSync(cacheFilePath, JSON.stringify(resultado.cache, null, 2), "utf-8");
+      console.log(`💾 Cache guardado en: ${cacheFilePath}`);
+    } else {
+      console.log("⚠️ No se recibió cache para guardar.");
+    }
+
+
   } catch (e) {
+    console.error("❌ Error:", e.message || e);
+  } finally {
     console.timeEnd("⏱ Tiempo de ejecución de calcularRuta");
-    console.error("❌ Error:", e);
   }
 }
 
 test();
+
+
+
+
 
 
 

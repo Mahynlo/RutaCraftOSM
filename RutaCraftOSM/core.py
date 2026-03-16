@@ -1,13 +1,15 @@
 import pickle
 import os
-import heapq
+import sys
+import heapq 
+import json
 from math import radians, cos, sin, asin, sqrt, atan2, degrees
 
 # =========================
 # | FUNCIONES UTILITARIAS |
 # =========================
 
-def haversine(coord1, coord2):
+def haversine(coord1, coord2): # Calcula la distancia entre dos coordenadas GPS
     lat1, lon1 = coord1
     lat2, lon2 = coord2
     R = 6371000  # Radio de la Tierra en metros
@@ -27,35 +29,140 @@ def buscar_nodo_mas_cercano(coords, lat, lon):
 # | CARGA DE DATOS        |
 # =========================
 
-def cargar_lista_adyacencia(path="grafo_mazatan_villapesqueira.pkl"):
-    """Carga archivo .pkl con (adj_list, coords)"""
-    
-    #se carga el grafo de la carpeta grafos/ con el nombre dado o por defecto grafo_mazatan_villapesqueira.pkl que debe estar en esa carpeta
-    
-    if not os.path.exists(path):
-        print(f"❌ Error: El archivo '{path}' no existe. Asegúrate de haberlo generado previamente.")
-        print(path)
+def cargar_lista_adyacencia(path="grafos/grafo_mazatan_villapesqueira.pkl"):
+    if getattr(sys, 'frozen', False):
+        # Ejecutable empaquetado (por Nuitka, PyInstaller, etc.)
+        base_path = os.path.dirname(sys.executable)
+    else:
+        # Modo normal (fuente .py)
+        base_path = os.path.join(os.path.dirname(__file__), "grafos")
+
+    path_real = os.path.join(base_path, path)
+
+    if not os.path.exists(path_real):
+        #print(f"❌ Error: El archivo '{path_real}' no existe.")
+        print(f"Error(py): El archivo '{path_real}' no existe.")
         return {}, {}
-    print(f"🔄 Cargando lista de adyacencia desde '{path}'...")
-    # se carga el archivo pickle
-    with open(path, "rb") as f:
+
+    #print(f"🔄 Cargando lista de adyacencia desde '{path_real}'...")
+    print(f"Success(py): Cargando lista de adyacencia desde: {path_real}")
+    with open(path_real, "rb") as f:
         return pickle.load(f)
 
-def cargar_cache(path="cache_rutas.pkl"):
-    # se carga de la carpeta cache_rutas/ el archivo cache_rutas.pkl
-    path = os.path.join("cache_rutas", path)  # ruta completa del archivo pickle
-    
-    return pickle.load(open(path, "rb")) if os.path.exists(path) else {}
+# =========================
+# | CARGA Y GUARDADO CACHE |
+# =========================
 
-def guardar_cache(cache, path="cache_rutas.pkl"):
-    # se crea la carpeta cons el nomnre cache_rutas/ con el nombre dado o por defecto cache_rutas.pkl
-    path = os.path.join("cache_rutas", path)  # ruta completa del archivo
-    if not os.path.exists(os.path.dirname(path)):
-        print(f"🔄 Creando carpeta para cache: {os.path.dirname(path)}")
-    #si de existe la carpeta "cache_rutas", la crea
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "wb") as f:
-        pickle.dump(cache, f)
+DEFAULT_FILENAME_PKL = "cache_rutas.pkl"
+DEFAULT_FILENAME_JSON = "cache_rutas.json"
+DEFAULT_DIR = "cache_rutas"
+
+def cargar_cache(path=None, formato="pkl"):
+    """
+    Carga el caché desde un archivo o string JSON.
+    
+    Args:
+        path: Ruta del archivo, directorio, o string JSON directo
+        formato: "pkl" para pickle o "json" para JSON
+    """
+    # Si path es None, usar archivo por defecto
+    if path is None:
+        default_filename = DEFAULT_FILENAME_PKL if formato == "pkl" else DEFAULT_FILENAME_JSON
+        path_real = os.path.join(DEFAULT_DIR, default_filename)
+        
+        if os.path.exists(path_real):
+            if formato == "pkl":
+                with open(path_real, "rb") as f:
+                    return pickle.load(f)
+            else:
+                with open(path_real, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        else:
+            return {}
+    
+    # Intentar interpretar como JSON string directo
+    try:
+        cache_data = json.loads(path)
+        # Convertir claves string de tuplas a tuplas reales
+        cache_convertido = {}
+        for key, value in cache_data.items():
+            try:
+                # Intentar convertir "(123, 456)" a (123, 456)
+                if key.startswith('(') and key.endswith(')'):
+                    parts = key.strip('()').split(',')
+                    if len(parts) == 2:
+                        converted_key = (int(parts[0].strip()), int(parts[1].strip()))
+                        cache_convertido[converted_key] = value
+                    else:
+                        cache_convertido[key] = value
+                else:
+                    cache_convertido[key] = value
+            except (ValueError, IndexError):
+                cache_convertido[key] = value
+        return cache_convertido
+    except json.JSONDecodeError:
+        # No es un JSON válido, tratar como ruta de archivo
+        pass
+    
+    # Determinar el nombre de archivo por defecto según el formato
+    default_filename = DEFAULT_FILENAME_PKL if formato == "pkl" else DEFAULT_FILENAME_JSON
+    
+    if os.path.isdir(path):
+        # Si es una carpeta, buscar dentro de ella
+        path_real = os.path.join(path, default_filename)
+    elif path.endswith((".pkl", ".json")):
+        # Si es un archivo con extensión válida, usamos la ruta tal cual
+        path_real = path
+        # Detectar formato automáticamente según la extensión
+        formato = "pkl" if path.endswith(".pkl") else "json"
+    else:
+        # Si es solo un nombre, lo metemos en la carpeta por defecto
+        path_real = os.path.join(DEFAULT_DIR, path)
+
+    if os.path.exists(path_real):
+        if formato == "pkl":
+            with open(path_real, "rb") as f:
+                return pickle.load(f)
+        else:  # formato == "json"
+            with open(path_real, "r", encoding="utf-8") as f:
+                return json.load(f)
+    else:
+        return {}
+
+def guardar_cache(cache, path=None, formato="pkl"):
+    """
+    Guarda el caché en un archivo.
+    
+    Args:
+        cache: Diccionario con los datos del caché
+        path: Ruta del archivo o directorio
+        formato: "pkl" para pickle o "json" para JSON
+    """
+    # Determinar el nombre de archivo por defecto según el formato
+    default_filename = DEFAULT_FILENAME_PKL if formato == "pkl" else DEFAULT_FILENAME_JSON
+    
+    if path is None:
+        path_real = os.path.join(DEFAULT_DIR, default_filename)
+    elif os.path.isdir(path):
+        path_real = os.path.join(path, default_filename)
+    elif path.endswith((".pkl", ".json")):
+        path_real = path
+        # Detectar formato automáticamente según la extensión
+        formato = "pkl" if path.endswith(".pkl") else "json"
+    else:
+        path_real = os.path.join(DEFAULT_DIR, path)
+
+    # Asegurar que la carpeta de destino existe
+    directorio_destino = os.path.dirname(path_real)
+    if directorio_destino:
+        os.makedirs(directorio_destino, exist_ok=True)
+
+    if formato == "pkl":
+        with open(path_real, "wb") as f:
+            pickle.dump(cache, f)
+    else:  # formato == "json"
+        with open(path_real, "w", encoding="utf-8") as f:
+            json.dump(cache, f, indent=2, ensure_ascii=False)
 
 # =========================
 # | A* CON CACHÉ          |
@@ -72,7 +179,7 @@ def astar_lista_adyacencia(adj_list, coords, origen, destino, cache):
     counter = 1 # contador para mantener el orden de inserción en el heap
 
     while open_set:
-        _, _, actual = heapq.heappop(open_set)
+        _, _, actual = heapq.heappop(open_set) 
 
         if actual == destino: # hemos llegado al destino
             path = [] # reconstruir el camino
@@ -114,7 +221,8 @@ def construir_ruta_con_lista(adj_list, coords, puntos_gps, cache, max_dist=10):
     for i in range(1, len(nodos)):
         segmento = astar_lista_adyacencia(adj_list, coords, nodos[i - 1], nodos[i], cache)
         if not segmento:
-            print(f"❌ No se encontró ruta entre {nodos[i - 1]} y {nodos[i]}")
+            #print(f"❌ No se encontró ruta entre {nodos[i - 1]} y {nodos[i]}")
+            print(f"Error(py): No se encontró ruta entre {nodos[i - 1]} y {nodos[i]}")
         ruta_nodos.extend(segmento if i == 1 else segmento[1:])
 
     return ruta_nodos, conexiones_verdes

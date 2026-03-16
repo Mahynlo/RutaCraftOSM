@@ -1,6 +1,5 @@
 # Ignorar binarios y carpetas de compilación
 build/
-*.exe
 *.dist
 *.build
 __pycache__

@@ -4,6 +4,8 @@ import * as path from "path";
 export interface CalcularRutaOptions {
     puntos: [number, number][];
     grafo?: string;
+    cachePath?: string;       // Ruta para leer un caché existente (usará --cache)
+    saveCache?: boolean;      // Si es false, usará --no-save-cache
 }
 
 export interface ResultadoRuta {
@@ -20,25 +22,52 @@ export interface ResultadoRuta {
     }[];
 }
 
+// Detecta si está empaquetado (producción)
+function isPackaged(): boolean {
+    return process.mainModule?.filename.includes('app.asar') ?? false;
+}
+
+// Obtiene el path correcto al binario dependiendo del entorno
+function getCliExePath(): string {
+    if (isPackaged()) {
+        const resourcesPath = (process as any).resourcesPath;
+        return path.join(
+            resourcesPath,
+            "app.asar.unpacked",
+            "node_modules",
+            "ruta-craft-osm",
+            "bin",
+            "cli",
+            "cli.exe"
+        );
+    } else {
+        return path.join(__dirname, "..", "bin", "cli", "cli.exe");
+    }
+}
 export function calcularRuta(options: CalcularRutaOptions): Promise<ResultadoRuta> {
     if (!options?.puntos || !Array.isArray(options.puntos)) {
         return Promise.reject(new Error("❌ Debes proporcionar 'options.puntos' como un array de coordenadas [lat, lon]"));
     }
 
-    const exePath = path.join(__dirname, "..", "bin", "cli", "cli.exe");
+    const exePath = getCliExePath();
+    const args: string[] = ["--stdout", "--no-save-cache","--array"];
 
-    const args: string[] = [
-        "--stdout",
-        "--array",
-        ...options.puntos.flatMap(([lat, lon]) => [lat.toString(), lon.toString()])
-    ];
+    args.push(...options.puntos.flatMap(([lat, lon]) => [lat.toString(), lon.toString()]));
 
-    if (options.grafo) { // Si se proporciona un grafo, lo añadimos a los argumentos
-        args.unshift("--grafo", options.grafo);
+    if (options.grafo) {
+        args.push("--grafo", options.grafo);
     }
 
+    if (options.cachePath) {
+        args.push("--cache", options.cachePath);
+    }
+
+    
+
+    //console.log("Ejecutando:", exePath, args);
+
     return new Promise((resolve, reject) => {
-        const proc = spawn(exePath, args, { shell: true });
+        const proc = spawn(exePath, args);
 
         let out = "";
         let err = "";
@@ -49,9 +78,8 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<ResultadoRut
         proc.on("close", (code: number) => {
             if (code === 0) {
                 try {
-                    // Filtrar todo hasta la primera '{' y desde ahí hasta el final
-                    const jsonStart = out.indexOf('{');
-                    const jsonEnd = out.lastIndexOf('}') + 1;
+                    const jsonStart = out.indexOf("{");
+                    const jsonEnd = out.lastIndexOf("}") + 1;
 
                     if (jsonStart === -1 || jsonEnd === -1) {
                         return reject(new Error("❌ No se encontró JSON válido en la salida"));
@@ -67,6 +95,5 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<ResultadoRut
                 reject(new Error("❌ Error en ejecución: " + err));
             }
         });
-
     });
 }

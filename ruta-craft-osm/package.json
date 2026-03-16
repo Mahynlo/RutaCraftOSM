@@ -1,7 +1,7 @@
 {
   "name": "ruta-craft-osm",
-  "version": "0.0.2",
-  "description": "Librería para calcular rutas usando ejecutable Nuitka",
+  "version": "0.0.7",
+  "description": "Librería para calcular rutas utilizando Ruta Craft OSM CLI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
 
