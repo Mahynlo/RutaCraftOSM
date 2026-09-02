@@ -58,10 +58,38 @@
         }
 
         .sidebar-header {
-            padding: 20px;
+            padding: 16px 20px;
             border-bottom: 1px solid var(--border);
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(10px);
+        }
+
+        .header-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(37, 99, 235, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-home:hover {
+            background: rgba(37, 99, 235, 0.3);
+            color: #ffffff;
+            border-color: #60a5fa;
+            transform: translateY(-1px);
         }
 
         .brand-title {
@@ -388,12 +416,18 @@
     <!-- Sidebar -->
     <div id="sidebar">
         <div class="sidebar-header">
-            <div class="brand-title">
-                <i class="fa-solid fa-route" style="color: var(--cpp-color);"></i>
-                RutaCraftOSM
-                <span class="brand-badge">C++17 vs Python</span>
+            <div class="header-top-row">
+                <div class="brand-title">
+                    <i class="fa-solid fa-route" style="color: var(--cpp-color);"></i>
+                    RutaCraftOSM
+                    <span class="brand-badge">C++ vs Python</span>
+                </div>
+                <a href="https://mahynlo.github.io/RutaCraftOSM/" class="btn-home" title="Volver a la Documentación Principal">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home</span>
+                </a>
             </div>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
                 Visualizador y Comparador de Rutas OSM
             </p>
         </div>
@@ -476,6 +510,9 @@
     <!-- Map Container -->
     <div id="map-container">
         <div class="map-overlay-controls">
+            <a href="https://mahynlo.github.io/RutaCraftOSM/" class="floating-btn" style="text-decoration: none;" title="Volver a la Documentación Principal">
+                <i class="fa-solid fa-house"></i> Docs / Home
+            </a>
             <button class="floating-btn" onclick="map.fitBounds(polylineLayer.getBounds(), {padding: [50, 50]})">
                 <i class="fa-solid fa-arrows-to-eye"></i> Centrar Ruta
             </button>
