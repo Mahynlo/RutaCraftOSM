@@ -9,375 +9,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #1d4ed8;
-            --cpp: #06b6d4;
-            --python: #f59e0b;
-            --success: #10b981;
-            --bg-dark: #0f172a;
-            --surface: #1e293b;
-            --surface-card: #334155;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #475569;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            line-height: 1.6;
-            padding-bottom: 60px;
-        }
-
-        /* Navbar */
-        .navbar {
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-            padding: 16px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .nav-brand {
-            font-size: 1.3rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #fff;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .nav-link {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-        }
-
-        .nav-link:hover { color: var(--text-main); }
-
-        .btn-cta {
-            background: linear-gradient(135deg, var(--cpp), var(--primary));
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 700;
-            text-decoration: none;
-            font-size: 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn-cta:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
-        }
-
-        .btn-hamburger {
-            display: none;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            cursor: pointer;
-        }
-
-        /* Container */
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Mobile Enhancements */
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 14px 20px;
-                position: relative;
-            }
-            .nav-brand { font-size: 1.2rem; }
-            .btn-hamburger { display: block; }
-            
-            .nav-links {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: #1e293b;
-                border-bottom: 1px solid var(--border);
-                flex-direction: column;
-                align-items: stretch;
-                padding: 20px;
-                gap: 12px;
-                box-shadow: 0 12px 30px rgba(0,0,0,0.6);
-            }
-
-            .nav-links.open {
-                display: flex;
-            }
-
-            .nav-link {
-                padding: 10px 14px;
-                background: rgba(15, 23, 42, 0.5);
-                border-radius: 8px;
-                font-size: 0.95rem;
-            }
-
-            .btn-cta {
-                justify-content: center;
-                padding: 12px;
-                font-size: 0.95rem;
-            }
-            
-            .hero { padding: 40px 0 30px; }
-            .hero h1 { font-size: 2.2rem; }
-            .hero p { font-size: 1rem; }
-            
-            .hero-actions {
-                flex-direction: column;
-                gap: 10px;
-            }
-            .hero-actions a {
-                width: 100%;
-                justify-content: center;
-                padding: 12px 20px;
-            }
-
-            .benchmark-card {
-                padding: 20px;
-                margin: 24px 0;
-            }
-
-            .docs-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Hero Section */
-        .hero {
-            padding: 70px 0 50px;
-            text-align: center;
-        }
-
-        .badge-hero {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(6, 182, 212, 0.15);
-            border: 1px solid rgba(6, 182, 212, 0.3);
-            color: var(--cpp);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-        }
-
-        .hero h1 {
-            font-size: 3rem;
-            font-weight: 900;
-            letter-spacing: -1px;
-            margin-bottom: 16px;
-            background: linear-gradient(to right, #ffffff, #94a3b8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero p {
-            font-size: 1.15rem;
-            color: var(--text-muted);
-            max-width: 720px;
-            margin: 0 auto 30px;
-        }
-
-        .hero-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .btn-secondary {
-            background: var(--surface);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            text-decoration: none;
-            font-size: 0.95rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-
-        .btn-secondary:hover {
-            background: var(--surface-card);
-            border-color: var(--text-muted);
-        }
-
-        /* Benchmark Showcase */
-        .benchmark-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 30px;
-            margin: 40px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .bench-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .stat-box {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .stat-num {
-            font-size: 2rem;
-            font-weight: 900;
-            color: var(--cpp);
-            margin: 6px 0;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        /* Documentation Grid */
-        .docs-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .doc-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            text-decoration: none;
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: all 0.2s ease;
-        }
-
-        .doc-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--primary);
-            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
-        }
-
-        .doc-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            margin-bottom: 16px;
-        }
-
-        .icon-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-        .icon-yellow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-        .icon-cyan { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
-        .icon-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-
-        .doc-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .doc-desc {
-            font-size: 0.88rem;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        .doc-link-text {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--primary);
-            margin-top: 16px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* Code block */
-        .code-snippet {
-            background: #090d16;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 16px;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.85rem;
-            color: #38bdf8;
-            overflow-x: auto;
-            margin: 20px 0;
-        }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            margin-top: 60px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-        }
-    </style>
+    <!-- Modular CSS -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
 
     <!-- Navbar -->
     <header class="navbar">
-        <a href="#" class="nav-brand">
+        <a href="index.html" class="nav-brand">
             <i class="fa-solid fa-route" style="color: var(--cpp);"></i>
             RutaCraftOSM
         </a>
@@ -396,11 +36,19 @@
         </nav>
     </header>
 
-    <!-- Hero Section -->
+    <!-- Main Content -->
     <main class="container">
+        
+        <!-- Hero Section -->
         <section class="hero">
             <div class="badge-hero">
-                <i class="fa-solid fa-bolt"></i> C++20 + OpenStreetMap + KD-Tree $O(\log N)$
+                <i class="fa-solid fa-bolt"></i> C++
+            </div>
+             <div class="badge-hero">
+                <i class="fa-solid fa-bolt"></i> OpenStreetMap
+            </div>
+             <div class="badge-hero">
+                <i class="fa-solid fa-bolt"></i> KD-Tree O(log N)
             </div>
             <h1>Calculadora de Rutas Offline de Alto Rendimiento</h1>
             <p>
@@ -415,19 +63,19 @@
                     <i class="fa-solid fa-book-open"></i>
                     Explorar Documentación
                 </a>
-                <a href="https://github.com/Mahynlo/RutaCraftOSM" target="_blank" class="btn-secondary">
+                <a href="https://github.com/Mahynlo/RutaCraftOSM" target="_blank" rel="noopener noreferrer" class="btn-secondary">
                     <i class="fa-brands fa-github"></i>
                     Repositorio GitHub
                 </a>
             </div>
         </section>
 
-        <!-- Benchmark Section -->
+        <!-- Benchmark Showcase -->
         <section class="benchmark-card">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div>
                     <h2 style="font-size: 1.4rem; font-weight: 800;">⚡ Benchmark Comparativo: Python vs C++20</h2>
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">Prueba real calculando 23 paradas GPS continuas a lo largo de Mazatán y Villa Pesqueira</p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Prueba real calculando 23 paradas GPS continuas</p>
                 </div>
                 <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;">
                     16.0x más rápido
@@ -443,7 +91,7 @@
                 <div class="stat-box">
                     <div class="stat-label">Tiempo Python</div>
                     <div class="stat-num" style="color: var(--python);">910.1 ms</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">Escaneo lineal $O(N)$</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Escaneo lineal O(N)</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Distancia Total</div>
@@ -452,13 +100,13 @@
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Consumo de RAM</div>
-                    <div class="stat-num" style="color: #a855f7;">&lt; 15 MB</div>
+                    <div class="stat-num" style="color: var(--purple);">&lt; 15 MB</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">Memoria contigua</div>
                 </div>
             </div>
         </section>
 
-        <!-- Documentation Guides Cards -->
+        <!-- Documentation Guides Grid -->
         <h2 style="font-size: 1.5rem; font-weight: 800; margin-top: 40px;">📚 Guías Técnicas Detalladas</h2>
         <div class="docs-grid">
             
@@ -524,23 +172,7 @@ console.log(respuesta.resultado.instrucciones);
         </footer>
     </main>
 
-    <script>
-        function toggleNav() {
-            const nav = document.getElementById('nav-links');
-            const btn = document.getElementById('nav-toggle');
-            const isOpen = nav.classList.toggle('open');
-            btn.innerHTML = isOpen ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
-        }
-
-        // Cerrar menú al hacer clic en un enlace en móvil
-        document.querySelectorAll('.nav-link, .btn-cta').forEach(link => {
-            link.addEventListener('click', () => {
-                const nav = document.getElementById('nav-links');
-                if (nav.classList.contains('open')) {
-                    toggleNav();
-                }
-            });
-        });
-    </script>
+    <!-- Modular Script -->
+    <script src="js/landing.js"></script>
 </body>
 </html>

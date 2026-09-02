@@ -44,13 +44,17 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
 
 ```text
 RutaCraftOSM/
-├── docs/                       # Documentación técnica completa y visualizaciones
-│   ├── README.md               # Índice principal (este archivo)
+├── docs/                       # Documentación técnica completa y sitio web interactivo
+│   ├── css/                    # Estilos modulares (theme, landing, docs, visualizador)
+│   ├── js/                     # Lógica modular (docs, visualizador, landing, datos_ejemplo)
 │   ├── 1_ARQUITECTURA_Y_MIGRACION.md
 │   ├── 2_IMPLEMENTACION_PYTHON_UV.md
 │   ├── 3_MOTOR_CPP_RUTACRAFT.md
 │   ├── 4_INTEGRACION_TYPESCRIPT_ELECTRON.md
-│   └── visualizacion_ruta.html
+│   ├── index.html              # Portada y portal de documentación
+│   ├── doc.html                # Lector Markdown interactivo
+│   ├── visualizacion_ruta.html # Visualizador Leaflet y comparador de rutas
+│   └── README.md               # Índice general
 │
 ├── RutaCraftOSM/               # Módulo Python (Pipeline de datos geográficos con uv)
 │   ├── .venv/                  # Entorno virtual gestionado con uv
