@@ -12,6 +12,9 @@
     <!-- Modular CSS -->
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/landing.css">
+    
+    <!-- Theme Manager -->
+    <script src="js/theme.js"></script>
 </head>
 <body>
 
@@ -21,19 +24,26 @@
             <i class="fa-solid fa-route" style="color: var(--cpp);"></i>
             RutaCraftOSM
         </a>
-        <button class="btn-hamburger" id="nav-toggle" onclick="toggleNav()" aria-label="Abrir Menú">
-            <i class="fa-solid fa-bars"></i>
-        </button>
-        <nav class="nav-links" id="nav-links">
-            <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="nav-link">Arquitectura</a>
-            <a href="doc.html?doc=2_IMPLEMENTACION_PYTHON_UV.md" class="nav-link">Python (uv)</a>
-            <a href="doc.html?doc=3_MOTOR_CPP_RUTACRAFT.md" class="nav-link">Motor C++</a>
-            <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="nav-link">NPM / Electron</a>
-            <a href="visualizacion_ruta.html" class="btn-cta">
-                <i class="fa-solid fa-map-location-dot"></i>
-                Visualizador Interactivo
-            </a>
-        </nav>
+
+        <div class="nav-right">
+            <nav class="nav-links" id="nav-links">
+                <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="nav-link">Arquitectura</a>
+                <a href="doc.html?doc=2_IMPLEMENTACION_PYTHON_UV.md" class="nav-link">Python (uv)</a>
+                <a href="doc.html?doc=3_MOTOR_CPP_RUTACRAFT.md" class="nav-link">Motor C++</a>
+                <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="nav-link">NPM / Electron</a>
+                <a href="visualizacion_ruta.html" class="btn-cta">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    Visualizador Interactivo
+                </a>
+            </nav>
+
+            <div class="nav-actions">
+                <button class="btn-theme-toggle" aria-label="Cambiar Tema"></button>
+                <button class="btn-hamburger" id="nav-toggle" onclick="toggleNav()" aria-label="Abrir Menú">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </div>
     </header>
 
     <!-- Main Content -->
@@ -149,22 +159,123 @@
         </div>
 
         <!-- Quick Code Example -->
-        <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 40px;">💻 Ejemplo Rápido de Uso en Node.js / Electron</h2>
-        <div class="code-snippet">
-const { calcularRuta } = require('ruta-craft-osm');
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 50px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h2 style="font-size: 1.4rem; font-weight: 800;">💻 Ejemplos Rápidos de Integración</h2>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Usa el motor de rutas desde TypeScript, Node.js, Electron o la terminal de Python</p>
+            </div>
+            <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" style="color: var(--primary); font-size: 0.85rem; font-weight: 700; text-decoration: none;">
+                Ver documentación de la API <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
 
-const respuesta = await calcularRuta({
+        <div class="code-showcase">
+            <div class="code-window-header">
+                <div class="code-window-left">
+                    <div class="window-dots">
+                        <div class="dot dot-red"></div>
+                        <div class="dot dot-yellow"></div>
+                        <div class="dot dot-green"></div>
+                    </div>
+                    <div class="code-tabs">
+                        <button class="code-tab-btn active" data-tab="ts" onclick="switchCodeTab('ts')">
+                            <i class="fa-brands fa-js" style="color: #3178c6;"></i> TypeScript (ESM)
+                        </button>
+                        <button class="code-tab-btn" data-tab="cjs" onclick="switchCodeTab('cjs')">
+                            <i class="fa-brands fa-node-js" style="color: #68a063;"></i> Node / Electron
+                        </button>
+                        <button class="code-tab-btn" data-tab="py" onclick="switchCodeTab('py')">
+                            <i class="fa-brands fa-python" style="color: #f59e0b;"></i> Python (uv)
+                        </button>
+                        <button class="code-tab-btn" data-tab="json" onclick="switchCodeTab('json')">
+                            <i class="fa-solid fa-code" style="color: #38bdf8;"></i> Salida JSON
+                        </button>
+                    </div>
+                </div>
+                <button class="btn-copy-code" id="btn-copy-code" onclick="copyActiveCode()">
+                    <i class="fa-regular fa-copy"></i> Copiar Código
+                </button>
+            </div>
+
+            <!-- Tab 1: TypeScript -->
+            <pre class="code-panel active" id="panel-ts"><code><span class="token-kw">import</span> { <span class="token-fn">calcularRuta</span>, <span class="token-type">RespuestaRutaCompleta</span> } <span class="token-kw">from</span> <span class="token-str">'ruta-craft-osm'</span>;
+
+<span class="token-com">// Cálculo de ruta óptima multi-parada con C++ nativo</span>
+<span class="token-kw">const</span> respuesta: <span class="token-type">RespuestaRutaCompleta</span> = <span class="token-kw">await</span> <span class="token-fn">calcularRuta</span>({
   puntos: [
-    [29.065639, -110.056448], // Origen (A)
-    [29.062039, -110.059091], // Parada 1
-    [29.059486, -110.053973], // Parada 2
-    [29.118091, -109.970340]  // Destino (B)
+    [<span class="token-num">29.065639</span>, <span class="token-num">-110.056448</span>], <span class="token-com">// Origen (A)</span>
+    [<span class="token-num">29.062039</span>, <span class="token-num">-110.059091</span>], <span class="token-com">// Parada 1</span>
+    [<span class="token-num">29.059486</span>, <span class="token-num">-110.053973</span>], <span class="token-com">// Parada 2</span>
+    [<span class="token-num">29.118091</span>, <span class="token-num">-109.970340</span>]  <span class="token-com">// Destino (B)</span>
   ],
-  cachePath: './cache_rutas.json'
+  cachePath: <span class="token-str">'./cache_rutas.json'</span>
 });
 
-console.log(`Distancia: ${respuesta.resultado.distancia_total_km} km`);
-console.log(respuesta.resultado.instrucciones);
+<span class="token-fn">console</span>.<span class="token-fn">log</span>(<span class="token-str">`⚡ Distancia: <span class="token-type">${respuesta.resultado.distancia_total_km}</span> km`</span>);
+<span class="token-fn">console</span>.<span class="token-fn">log</span>(<span class="token-str">`📍 Puntos polilínea: <span class="token-type">${respuesta.resultado.ruta_coordenadas.length}</span>`</span>);
+<span class="token-fn">console</span>.<span class="token-fn">log</span>(respuesta.resultado.instrucciones[<span class="token-num">0</span>]); <span class="token-com">// { accion: "Sigue recto", calle: "...", distancia_m: 466.3 }</span></code></pre>
+
+            <!-- Tab 2: CommonJS / Electron -->
+            <pre class="code-panel" id="panel-cjs"><code><span class="token-kw">const</span> { <span class="token-fn">calcularRuta</span> } = <span class="token-fn">require</span>(<span class="token-str">'ruta-craft-osm'</span>);
+
+<span class="token-com">// Compatible con procesos Main y Renderer (Preload) en Electron</span>
+<span class="token-kw">async function</span> <span class="token-fn">obtenerTrazado</span>() {
+  <span class="token-kw">const</span> respuesta = <span class="token-kw">await</span> <span class="token-fn">calcularRuta</span>({
+    puntos: [
+      [<span class="token-num">29.065639</span>, <span class="token-num">-110.056448</span>],
+      [<span class="token-num">29.118091</span>, <span class="token-num">-109.970340</span>]
+    ]
+  });
+
+  <span class="token-kw">if</span> (respuesta.exito) {
+    <span class="token-com">// Renderizar en Leaflet / Mapbox</span>
+    <span class="token-fn">dibujarRutaEnMapa</span>(respuesta.resultado.ruta_coordenadas);
+  }
+}</code></pre>
+
+            <!-- Tab 3: Python CLI -->
+            <pre class="code-panel" id="panel-py"><code><span class="token-com"># Ejecutar cálculo de prueba directamente desde la terminal con uv</span>
+<span class="token-cmd">uv run python -m RutaCraftOSM.cli</span> \
+  --mapa-bin "datos/sonora_rutas.bin" \
+  --puntos "29.0656,-110.0564;29.0620,-110.0590;29.1180,-109.9703" \
+  --salida "resultado_ruta.json"
+
+<span class="token-com"># O desde script de Python</span>
+<span class="token-kw">from</span> RutaCraftOSM.motor_ruta <span class="token-kw">import</span> MotorRutaCraft
+
+motor = MotorRutaCraft(<span class="token-str">"datos/sonora_rutas.bin"</span>)
+resultado = motor.calcular_ruta_multiparada([
+    (<span class="token-num">29.065639</span>, <span class="token-num">-110.056448</span>),
+    (<span class="token-num">29.118091</span>, <span class="token-num">-109.970340</span>)
+])
+<span class="token-fn">print</span>(<span class="token-str">f"Distancia: {resultado['distancia_total_km']} km"</span>)</code></pre>
+
+            <!-- Tab 4: JSON Output -->
+            <pre class="code-panel" id="panel-json"><code>{
+  <span class="token-prop">"exito"</span>: <span class="token-kw">true</span>,
+  <span class="token-prop">"origen"</span>: <span class="token-str">"motor_cpp_nativo"</span>,
+  <span class="token-prop">"resultado"</span>: {
+    <span class="token-prop">"distancia_total_km"</span>: <span class="token-num">14.68</span>,
+    <span class="token-prop">"total_puntos_polilinea"</span>: <span class="token-num">458</span>,
+    <span class="token-prop">"tiempo_calculo_ms"</span>: <span class="token-num">56.7</span>,
+    <span class="token-prop">"ruta_coordenadas"</span>: [
+      [<span class="token-num">29.065836</span>, <span class="token-num">-110.056719</span>],
+      [<span class="token-num">29.065648</span>, <span class="token-num">-110.056875</span>]
+    ],
+    <span class="token-prop">"instrucciones"</span>: [
+      {
+        <span class="token-prop">"accion"</span>: <span class="token-str">"Sigue recto"</span>,
+        <span class="token-prop">"calle"</span>: <span class="token-str">"Carretera Sahuaripa - Hermosillo"</span>,
+        <span class="token-prop">"distancia_m"</span>: <span class="token-num">466.3</span>
+      },
+      {
+        <span class="token-prop">"accion"</span>: <span class="token-str">"Gira a la derecha"</span>,
+        <span class="token-prop">"calle"</span>: <span class="token-str">"Calle Principal"</span>,
+        <span class="token-prop">"distancia_m"</span>: <span class="token-num">7.2</span>
+      }
+    ]
+  }
+}</code></pre>
         </div>
 
         <footer class="footer">

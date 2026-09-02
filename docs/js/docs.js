@@ -27,7 +27,7 @@ function toggleSidebar(forceState) {
     }
 }
 
-// Configurar Mermaid
+// Configurar Mermaid (diseño de alta legibilidad y contraste consistente)
 mermaid.initialize({
     startOnLoad: false,
     theme: 'dark',
@@ -35,7 +35,7 @@ mermaid.initialize({
         darkMode: true,
         background: '#0f172a',
         primaryColor: '#3b82f6',
-        primaryTextColor: '#fff',
+        primaryTextColor: '#f8fafc',
         lineColor: '#06b6d4',
         secondaryColor: '#f59e0b',
         tertiaryColor: '#1e293b'
@@ -112,15 +112,45 @@ async function loadDocument(docFile) {
         }
         const markdownText = await response.text();
 
-        // 1. Extraer bloques de mermaid
+        // 1. Extraer bloques de mermaid y fórmulas matemáticas
         const mermaidBlocks = [];
-        let processedMd = markdownText.replace(/```mermaid([\s\S]*?)```/g, (match, code) => {
+        const mathBlocks = [];
+
+        // Extraer bloques de código generales para no alterar fórmulas dentro de código
+        const codeBlocks = [];
+        let processedMd = markdownText.replace(/(```[\s\S]*?```|`[^`]+?`)/g, (match) => {
+            const placeholder = `<!--CODE_BLOCK_ESC_${codeBlocks.length}-->`;
+            codeBlocks.push(match);
+            return placeholder;
+        });
+
+        // Extraer fórmulas matemáticas en bloque $$ ... $$
+        processedMd = processedMd.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+            const placeholder = `<!--MATH_BLOCK_${mathBlocks.length}-->`;
+            mathBlocks.push({ math: math.trim(), display: true });
+            return placeholder;
+        });
+
+        // Extraer fórmulas matemáticas inline $ ... $
+        processedMd = processedMd.replace(/(^|[^\\])\$([^\$]+?)\$/g, (match, prefix, math) => {
+            const placeholder = `<!--MATH_INLINE_${mathBlocks.length}-->`;
+            mathBlocks.push({ math: math.trim(), display: false });
+            return `${prefix}${placeholder}`;
+        });
+
+        // Restaurar bloques de código
+        codeBlocks.forEach((code, idx) => {
+            processedMd = processedMd.replace(`<!--CODE_BLOCK_ESC_${idx}-->`, code);
+        });
+
+        // Extraer diagramas de Mermaid
+        processedMd = processedMd.replace(/```mermaid([\s\S]*?)```/g, (match, code) => {
             const placeholder = `<!--MERMAID_PLACEHOLDER_${mermaidBlocks.length}-->`;
             mermaidBlocks.push(code.trim());
             return placeholder;
         });
 
-        // 2. Parsear Markdown a HTML
+        // 2. Parsear Markdown a HTML con marked
         let parsedHtml = marked.parse(processedMd);
 
         // 3. Transformar alertas de GitHub
@@ -131,7 +161,38 @@ async function loadDocument(docFile) {
 
         contentEl.innerHTML = parsedHtml;
 
-        // 5. Reemplazar placeholders de Mermaid
+        // 5. Renderizar fórmulas de KaTeX
+        if (window.katex && mathBlocks.length > 0) {
+            mathBlocks.forEach((item, idx) => {
+                const isBlock = item.display;
+                const token = isBlock ? `MATH_BLOCK_${idx}` : `MATH_INLINE_${idx}`;
+                
+                let renderedHtml = '';
+                try {
+                    renderedHtml = katex.renderToString(item.math, {
+                        displayMode: item.display,
+                        throwOnError: false
+                    });
+                } catch (kErr) {
+                    renderedHtml = `<span style="color:var(--danger);">${item.math}</span>`;
+                }
+
+                // Reemplazar nodo de comentario en el DOM
+                const commentIterator = document.createNodeIterator(contentEl, NodeFilter.SHOW_COMMENT);
+                let node;
+                while ((node = commentIterator.nextNode())) {
+                    if (node.nodeValue === token) {
+                        const span = document.createElement(isBlock ? 'div' : 'span');
+                        if (isBlock) span.style.margin = '16px 0';
+                        span.innerHTML = renderedHtml;
+                        node.parentNode.replaceChild(span, node);
+                        break;
+                    }
+                }
+            });
+        }
+
+        // 6. Reemplazar placeholders de Mermaid
         mermaidBlocks.forEach((code, idx) => {
             const targetEl = document.createElement('pre');
             targetEl.className = 'mermaid';

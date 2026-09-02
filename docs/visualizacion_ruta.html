@@ -16,6 +16,9 @@
     <!-- Modular CSS -->
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/visualizador.css">
+    
+    <!-- Theme Manager -->
+    <script src="js/theme.js"></script>
 </head>
 <body>
 
@@ -28,10 +31,13 @@
                     RutaCraftOSM
                     <span class="brand-badge">C++ vs Python</span>
                 </div>
-                <a href="index.html" class="btn-home" title="Volver a la Documentación Principal">
-                    <i class="fa-solid fa-house"></i>
-                    <span>Home</span>
-                </a>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn-theme-toggle" aria-label="Cambiar Tema" style="padding: 4px 8px; font-size: 0.75rem;"></button>
+                    <a href="index.html" class="btn-home" title="Volver a la Documentación Principal">
+                        <i class="fa-solid fa-house"></i>
+                        <span>Home</span>
+                    </a>
+                </div>
             </div>
             <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
                 Visualizador y Comparador de Rutas OSM
@@ -116,6 +122,7 @@
     <!-- Map Container -->
     <main id="map-container">
         <div class="map-overlay-controls">
+            <button class="floating-btn btn-theme-toggle" aria-label="Cambiar Tema"></button>
             <a href="index.html" class="floating-btn" style="text-decoration: none;" title="Volver a la Documentación Principal">
                 <i class="fa-solid fa-house"></i> <span>Docs / Home</span>
             </a>

@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/docs.css">
     
-    <!-- CDN Libraries (Marked, Highlight, Mermaid) -->
+    <!-- CDN Libraries (Marked, Highlight, Mermaid, KaTeX) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -25,6 +25,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    
+    <!-- KaTeX (Mathematical Formulas) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Theme Manager -->
+    <script src="js/theme.js"></script>
 </head>
 <body>
 
@@ -34,9 +42,12 @@
             <i class="fa-solid fa-bars"></i>
         </button>
         <span style="font-weight: 800; font-size: 0.95rem;">RutaCraftOSM Docs</span>
-        <a href="visualizacion_ruta.html" style="color: var(--cpp); font-size: 1.1rem;" title="Visualizador">
-            <i class="fa-solid fa-map-location-dot"></i>
-        </a>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-theme-toggle" aria-label="Cambiar Tema" style="padding: 5px 8px; font-size: 0.75rem;"></button>
+            <a href="visualizacion_ruta.html" style="color: var(--cpp); font-size: 1.1rem;" title="Visualizador">
+                <i class="fa-solid fa-map-location-dot"></i>
+            </a>
+        </div>
     </div>
 
     <!-- Overlay Fondo Móvil -->
@@ -49,9 +60,12 @@
                 <i class="fa-solid fa-route" style="color: var(--cpp);"></i>
                 RutaCraftOSM
             </a>
-            <button class="btn-menu-toggle" style="display: none;" id="btn-close-sidebar" onclick="toggleSidebar(false)" aria-label="Cerrar Menú">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn-theme-toggle" aria-label="Cambiar Tema" style="padding: 4px 8px; font-size: 0.75rem;"></button>
+                <button class="btn-menu-toggle" style="display: none;" id="btn-close-sidebar" onclick="toggleSidebar(false)" aria-label="Cerrar Menú">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
         </div>
 
         <div class="nav-sections">

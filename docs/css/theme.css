@@ -1,3 +1,7 @@
+/* ==========================================
+   THEME VARIABLES & DESIGN TOKENS
+   ========================================== */
+
 :root {
     --primary: #3b82f6;
     --primary-dark: #1d4ed8;
@@ -8,16 +12,48 @@
     --danger: #ef4444;
     --purple: #a855f7;
     
+    /* Dark Theme Palette (Default) */
     --bg-dark: #0f172a;
     --surface: #1e293b;
     --surface-card: #334155;
     --surface-hover: #3b4b63;
-    --code-bg: #090d16;
+    --code-bg: #0d1117;
+    --code-text: #e6edf3;
+    --navbar-bg: rgba(15, 23, 42, 0.95);
     
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --border: #334155;
     --border-light: rgba(255, 255, 255, 0.08);
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --hero-title-grad: linear-gradient(to right, #ffffff, #94a3b8);
+}
+
+/* Light Theme */
+[data-theme="light"] {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #2563eb;
+    --cpp: #0891b2;
+    --python: #d97706;
+    --success: #059669;
+    --danger: #dc2626;
+    --purple: #7c3aed;
+
+    --bg-dark: #f8fafc;
+    --surface: #ffffff;
+    --surface-card: #f1f5f9;
+    --surface-hover: #e2e8f0;
+    --code-bg: #0d1117;
+    --code-text: #e6edf3;
+    --navbar-bg: rgba(255, 255, 255, 0.95);
+    
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --border-light: rgba(0, 0, 0, 0.06);
+    --shadow-color: rgba(0, 0, 0, 0.06);
+    --hero-title-grad: linear-gradient(to right, #0f172a, #334155);
 }
 
 * {
@@ -32,6 +68,27 @@ body {
     background-color: var(--bg-dark);
     color: var(--text-main);
     line-height: 1.6;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Theme Selector Button */
+.btn-theme-toggle {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary);
 }
 
 /* Custom Scrollbars */
@@ -40,7 +97,7 @@ body {
     height: 6px;
 }
 ::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.5);
+    background: var(--bg-dark);
 }
 ::-webkit-scrollbar-thumb {
     background: var(--surface-card);

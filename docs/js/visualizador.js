@@ -9,7 +9,7 @@ let markersGroup = null;
 let currentMode = 'cpp';
 let showStops = true;
 
-// Inicializar Mapa
+// Inicializar Mapa con OpenStreetMap Estándar
 function initMap() {
     map = L.map('map', {
         center: [29.088, -110.015],
@@ -19,7 +19,8 @@ function initMap() {
 
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Mosaico Oficial Nítido de OpenStreetMap
+    tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19
     }).addTo(map);
