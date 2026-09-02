@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RutaCraftOSM - Documentación y Visualizador</title>
+    
+    <!-- Google Fonts & Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --cpp: #06b6d4;
+            --python: #f59e0b;
+            --success: #10b981;
+            --bg-dark: #0f172a;
+            --surface: #1e293b;
+            --surface-card: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            font-size: 1.3rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover { color: var(--text-main); }
+
+        .btn-cta {
+            background: linear-gradient(135deg, var(--cpp), var(--primary));
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 70px 0 50px;
+            text-align: center;
+        }
+
+        .badge-hero {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: var(--cpp);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 720px;
+            margin: 0 auto 30px;
+        }
+
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-card);
+            border-color: var(--text-muted);
+        }
+
+        /* Benchmark Showcase */
+        .benchmark-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 40px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .bench-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--cpp);
+            margin: 6px 0;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Documentation Grid */
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .doc-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-decoration: none;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+
+        .doc-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
+        }
+
+        .doc-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+        }
+
+        .icon-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .icon-yellow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .icon-cyan { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
+        .icon-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+
+        .doc-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .doc-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .doc-link-text {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Code block */
+        .code-snippet {
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #38bdf8;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <header class="navbar">
+        <a href="#" class="nav-brand">
+            <i class="fa-solid fa-route" style="color: var(--cpp);"></i>
+            RutaCraftOSM
+        </a>
+        <nav class="nav-links">
+            <a href="1_ARQUITECTURA_Y_MIGRACION.md" class="nav-link">Arquitectura</a>
+            <a href="2_IMPLEMENTACION_PYTHON_UV.md" class="nav-link">Python (uv)</a>
+            <a href="3_MOTOR_CPP_RUTACRAFT.md" class="nav-link">Motor C++</a>
+            <a href="4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="nav-link">NPM / Electron</a>
+            <a href="visualizacion_ruta.html" class="btn-cta">
+                <i class="fa-solid fa-map-location-dot"></i>
+                Visualizador Interactivo
+            </a>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="container">
+        <section class="hero">
+            <div class="badge-hero">
+                <i class="fa-solid fa-bolt"></i> C++20 + OpenStreetMap + KD-Tree $O(\log N)$
+            </div>
+            <h1>Calculadora de Rutas Offline de Alto Rendimiento</h1>
+            <p>
+                Motor de navegación multi-parada 100% autónomo. Genera trazados óptimos, polilíneas de alta resolución e instrucciones paso a paso tipo GPS en menos de 60 milisegundos.
+            </p>
+            <div class="hero-actions">
+                <a href="visualizacion_ruta.html" class="btn-cta" style="padding: 12px 24px; font-size: 1rem;">
+                    <i class="fa-solid fa-play"></i>
+                    Probar Visualizador Web
+                </a>
+                <a href="1_ARQUITECTURA_Y_MIGRACION.md" class="btn-secondary">
+                    <i class="fa-solid fa-book-open"></i>
+                    Explorar Documentación
+                </a>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM" target="_blank" class="btn-secondary">
+                    <i class="fa-brands fa-github"></i>
+                    Repositorio GitHub
+                </a>
+            </div>
+        </section>
+
+        <!-- Benchmark Section -->
+        <section class="benchmark-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h2 style="font-size: 1.4rem; font-weight: 800;">⚡ Benchmark Comparativo: Python vs C++20</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Prueba real calculando 23 paradas GPS continuas a lo largo de Mazatán y Villa Pesqueira</p>
+                </div>
+                <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;">
+                    16.0x más rápido
+                </span>
+            </div>
+
+            <div class="bench-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Tiempo C++20</div>
+                    <div class="stat-num" style="color: var(--cpp);">56.7 ms</div>
+                    <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">Carga binaria &lt; 1ms</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Tiempo Python</div>
+                    <div class="stat-num" style="color: var(--python);">910.1 ms</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Escaneo lineal $O(N)$</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Distancia Total</div>
+                    <div class="stat-num">14.68 km</div>
+                    <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">Error: 0.00% (Exacto)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Consumo de RAM</div>
+                    <div class="stat-num" style="color: #a855f7;">&lt; 15 MB</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Memoria contigua</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Documentation Guides Cards -->
+        <h2 style="font-size: 1.5rem; font-weight: 800; margin-top: 40px;">📚 Guías Técnicas Detalladas</h2>
+        <div class="docs-grid">
+            
+            <a href="1_ARQUITECTURA_Y_MIGRACION.md" class="doc-card">
+                <div>
+                    <div class="doc-icon icon-blue"><i class="fa-solid fa-sitemap"></i></div>
+                    <div class="doc-title">1. Arquitectura y Migración</div>
+                    <div class="doc-desc">Análisis profundo de la arquitectura por capas, por qué se migró a C++ y reporte completo de benchmarks.</div>
+                </div>
+                <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
+            <a href="2_IMPLEMENTACION_PYTHON_UV.md" class="doc-card">
+                <div>
+                    <div class="doc-icon icon-yellow"><i class="fa-brands fa-python"></i></div>
+                    <div class="doc-title">2. Pipeline Python (uv)</div>
+                    <div class="doc-desc">Descarga de límites con OSMnx, unión con Shapely y exportación automática a formatos binario .bin, .json y .pkl.</div>
+                </div>
+                <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
+            <a href="3_MOTOR_CPP_RUTACRAFT.md" class="doc-card">
+                <div>
+                    <div class="doc-icon icon-cyan"><i class="fa-solid fa-microchip"></i></div>
+                    <div class="doc-title">3. Motor Nativo C++20</div>
+                    <div class="doc-desc">Estructura del formato binario RCO1, búsqueda espacial con KD-Tree 2D, algoritmo A* y compilación con g++.</div>
+                </div>
+                <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
+            <a href="4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="doc-card">
+                <div>
+                    <div class="doc-icon icon-purple"><i class="fa-brands fa-node-js"></i></div>
+                    <div class="doc-title">4. Integración NPM / Electron</div>
+                    <div class="doc-desc">Uso del wrapper TypeScript ruta-craft-osm, tipos e interfaces, y soporte automático de producción con app.asar.unpacked.</div>
+                </div>
+                <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
+        </div>
+
+        <!-- Quick Code Example -->
+        <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 40px;">💻 Ejemplo Rápido de Uso en Node.js / Electron</h2>
+        <div class="code-snippet">
+const { calcularRuta } = require('ruta-craft-osm');
+
+const respuesta = await calcularRuta({
+  puntos: [
+    [29.065639, -110.056448], // Origen (A)
+    [29.062039, -110.059091], // Parada 1
+    [29.059486, -110.053973], // Parada 2
+    [29.118091, -109.970340]  // Destino (B)
+  ],
+  cachePath: './cache_rutas.json'
+});
+
+console.log(`Distancia: ${respuesta.resultado.distancia_total_km} km`);
+console.log(respuesta.resultado.instrucciones);
+        </div>
+
+        <footer class="footer">
+            RutaCraftOSM &bull; Motor de Rutas y Navegación con OpenStreetMap &bull; 2026
+        </footer>
+    </main>
+
+</body>
+</html>
