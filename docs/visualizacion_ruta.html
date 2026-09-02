@@ -409,6 +409,91 @@
             font-weight: 800;
             box-shadow: 0 2px 6px rgba(0,0,0,0.5);
         }
+
+        /* Mobile Bottom View Switcher */
+        .mobile-bottom-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            z-index: 2000;
+            grid-template-columns: 1fr 1fr;
+            padding: 6px 12px;
+            gap: 10px;
+        }
+
+        .mobile-view-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mobile-view-btn.active {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: var(--primary);
+            color: #60a5fa;
+        }
+
+        /* Media Queries (< 860px) */
+        @media (max-width: 860px) {
+            body { flex-direction: column; }
+            .mobile-bottom-bar { display: grid; }
+            
+            #sidebar {
+                width: 100%;
+                height: calc(100vh - 60px);
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 60px;
+                z-index: 1500;
+                display: none;
+            }
+
+            #sidebar.mobile-active {
+                display: flex;
+            }
+
+            #map-container {
+                width: 100%;
+                height: calc(100vh - 60px);
+            }
+
+            .map-overlay-controls {
+                top: 12px;
+                right: 12px;
+                gap: 6px;
+            }
+
+            .floating-btn {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+
+            .floating-btn span { display: none; }
+
+            .map-legend {
+                bottom: 75px;
+                right: 12px;
+                padding: 8px 12px;
+                font-size: 0.7rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -543,8 +628,34 @@
         <div id="map"></div>
     </div>
 
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-bar">
+        <button class="mobile-view-btn active" id="btn-view-map" onclick="switchMobileView('map')">
+            <i class="fa-solid fa-map-location-dot"></i> Ver Mapa
+        </button>
+        <button class="mobile-view-btn" id="btn-view-panel" onclick="switchMobileView('panel')">
+            <i class="fa-solid fa-list-check"></i> Instrucciones & Stats
+        </button>
+    </nav>
+
     <!-- Script con datos y lógica Leaflet -->
     <script>
+        function switchMobileView(view) {
+            const sidebar = document.getElementById('sidebar');
+            const btnMap = document.getElementById('btn-view-map');
+            const btnPanel = document.getElementById('btn-view-panel');
+
+            if (view === 'panel') {
+                sidebar.classList.add('mobile-active');
+                btnPanel.classList.add('active');
+                btnMap.classList.remove('active');
+            } else {
+                sidebar.classList.remove('mobile-active');
+                btnMap.classList.add('active');
+                btnPanel.classList.remove('active');
+                setTimeout(() => map.invalidateSize(), 200);
+            }
+        }
         // ==========================================
         // DATOS REALES GENERADOS POR AMBOS MOTORES
         // ==========================================
