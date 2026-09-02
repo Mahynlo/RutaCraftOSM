@@ -4,7 +4,7 @@ import json
 import os
 
 SCRIPT_PATH = "cli.py"
-GRAFO_PATH = "grafo_villa_pesqueira.graphml"
+GRAFO_PATH = "grafo_mazatan_villapesqueira.pkl"
 TEST_PUNTOS = [[29.065639, -110.056448], [29.062039, -110.059091]]
 JSON_STRING = json.dumps(TEST_PUNTOS)
 
@@ -31,8 +31,10 @@ class TestCLI(unittest.TestCase):
         self.assertNotEqual(json_inicio, -1, "No se encontró JSON en la salida")
 
         try:
-            json_data = salida[json_inicio:]
-            return json.loads(json_data)
+            json_data = json.loads(salida[json_inicio:])
+            if isinstance(json_data, dict) and "resultado" in json_data:
+                return json_data["resultado"]
+            return json_data
         except json.JSONDecodeError:
             print("\n❌ Error al parsear JSON:")
             print(salida)

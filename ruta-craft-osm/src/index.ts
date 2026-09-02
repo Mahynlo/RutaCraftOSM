@@ -4,8 +4,16 @@ import * as path from "path";
 export interface CalcularRutaOptions {
     puntos: [number, number][];
     grafo?: string;
-    cachePath?: string;       // Ruta para leer un caché existente (usará --cache)
-    saveCache?: boolean;      // Si es false, usará --no-save-cache
+    cachePath?: string;       // Ruta para leer/guardar un caché existente (usará --cache)
+    saveCache?: boolean;      // Si es false, usará --no-save-cache (default: true)
+}
+
+export interface InstruccionNavegacion {
+    accion: string;
+    calle: string;
+    desde: [number, number];
+    hacia: [number, number];
+    distancia_m: number;
 }
 
 export interface ResultadoRuta {
@@ -13,22 +21,24 @@ export interface ResultadoRuta {
     ruta: [number, number][];
     distancia_total_m: number;
     distancia_total_km: number;
-    instrucciones: {
-        accion: string;
-        calle: string;
-        desde: [number, number];
-        hacia: [number, number];
-        distancia_m: number;
-    }[];
+    instrucciones: InstruccionNavegacion[];
 }
 
-// Detecta si está empaquetado (producción)
+export interface RespuestaRutaCompleta {
+    resultado: ResultadoRuta;
+    cache?: Record<string, string[]>;
+}
+
+// Detecta si está empaquetado con Electron (producción)
 function isPackaged(): boolean {
     return process.mainModule?.filename.includes('app.asar') ?? false;
 }
 
-// Obtiene el path correcto al binario dependiendo del entorno
+// Obtiene el path correcto al binario dependiendo del entorno y plataforma
 function getCliExePath(): string {
+    const isWindows = process.platform === "win32";
+    const binaryName = isWindows ? "cli.exe" : "cli";
+
     if (isPackaged()) {
         const resourcesPath = (process as any).resourcesPath;
         return path.join(
@@ -38,21 +48,24 @@ function getCliExePath(): string {
             "ruta-craft-osm",
             "bin",
             "cli",
-            "cli.exe"
+            binaryName
         );
     } else {
-        return path.join(__dirname, "..", "bin", "cli", "cli.exe");
+        return path.join(__dirname, "..", "bin", "cli", binaryName);
     }
 }
-export function calcularRuta(options: CalcularRutaOptions): Promise<ResultadoRuta> {
-    if (!options?.puntos || !Array.isArray(options.puntos)) {
+
+export function calcularRuta(options: CalcularRutaOptions): Promise<RespuestaRutaCompleta> {
+    if (!options?.puntos || !Array.isArray(options.puntos) || options.puntos.length === 0) {
         return Promise.reject(new Error("❌ Debes proporcionar 'options.puntos' como un array de coordenadas [lat, lon]"));
     }
 
     const exePath = getCliExePath();
-    const args: string[] = ["--stdout", "--no-save-cache","--array"];
+    const args: string[] = ["--stdout"];
 
-    args.push(...options.puntos.flatMap(([lat, lon]) => [lat.toString(), lon.toString()]));
+    if (options.saveCache === false) {
+        args.push("--no-save-cache");
+    }
 
     if (options.grafo) {
         args.push("--grafo", options.grafo);
@@ -62,9 +75,8 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<ResultadoRut
         args.push("--cache", options.cachePath);
     }
 
-    
-
-    //console.log("Ejecutando:", exePath, args);
+    args.push("--array");
+    args.push(...options.puntos.flatMap(([lat, lon]) => [lat.toString(), lon.toString()]));
 
     return new Promise((resolve, reject) => {
         const proc = spawn(exePath, args);
@@ -82,18 +94,22 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<ResultadoRut
                     const jsonEnd = out.lastIndexOf("}") + 1;
 
                     if (jsonStart === -1 || jsonEnd === -1) {
-                        return reject(new Error("❌ No se encontró JSON válido en la salida"));
+                        return reject(new Error("❌ No se encontró JSON válido en la salida: " + out));
                     }
 
                     const jsonString = out.substring(jsonStart, jsonEnd);
-                    const parsed = JSON.parse(jsonString);
+                    const parsed = JSON.parse(jsonString) as RespuestaRutaCompleta;
                     resolve(parsed);
                 } catch (e: any) {
                     reject(new Error("❌ Error al parsear JSON: " + e.message));
                 }
             } else {
-                reject(new Error("❌ Error en ejecución: " + err));
+                reject(new Error("❌ Error en ejecución: " + (err || out)));
             }
+        });
+
+        proc.on("error", (e: Error) => {
+            reject(new Error("❌ Error al ejecutar el binario: " + e.message));
         });
     });
 }
