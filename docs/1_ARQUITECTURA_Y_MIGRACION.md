@@ -11,8 +11,8 @@ flowchart TD
         PREP -->|Genera| BIN["grafo_zona.bin (Formato RCO1)"]
     end
 
-    subgraph Capa_Motor ["2. Motor de Ruteo (C++17 Autónomo)"]
-        BIN -->|Carga instantánea < 1ms| MOTOR["RutaCraftOSM_c (cli.exe)"]
+    subgraph Capa_Motor ["2. Motor de Ruteo (C++ Nativo)"]
+        BIN -->|"Carga instantánea (< 1ms)"| MOTOR["RutaCraftOSM_c (cli.exe)"]
         KDTREE["KD-Tree (Snapping O(log N))"] --> MOTOR
         ASTAR["A* en Memoria Contigua"] --> MOTOR
         INST["Generador de Maniobras Turn-by-Turn"] --> MOTOR

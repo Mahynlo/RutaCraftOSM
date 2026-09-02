@@ -480,15 +480,15 @@
                 }
                 const markdownText = await response.text();
 
-                // 1. Extraer bloques de mermaid para preservarlos antes de marked
+                // 1. Extraer bloques de mermaid para que marked no los altere
                 const mermaidBlocks = [];
                 let processedMd = markdownText.replace(/```mermaid([\s\S]*?)```/g, (match, code) => {
-                    const id = `mermaid-placeholder-${mermaidBlocks.length}`;
-                    mermaidBlocks.push({ id, code: code.trim() });
-                    return `<div class="mermaid" id="${id}">${code.trim()}</div>`;
+                    const placeholder = `<!--MERMAID_PLACEHOLDER_${mermaidBlocks.length}-->`;
+                    mermaidBlocks.push(code.trim());
+                    return placeholder;
                 });
 
-                // 2. Parsear Markdown a HTML
+                // 2. Parsear Markdown a HTML con marked
                 let parsedHtml = marked.parse(processedMd);
 
                 // 3. Transformar alertas de GitHub
@@ -496,7 +496,26 @@
 
                 contentEl.innerHTML = parsedHtml;
 
-                // 4. Interceptar links internos a archivos .md
+                // 4. Reemplazar los comentarios placeholder con elementos <pre class="mermaid"> seguros
+                mermaidBlocks.forEach((code, idx) => {
+                    const placeholder = `<!--MERMAID_PLACEHOLDER_${idx}-->`;
+                    // Buscar en nodos de comentario o en innerHTML
+                    const targetEl = document.createElement('pre');
+                    targetEl.className = 'mermaid';
+                    targetEl.textContent = code; // textContent preserva caracteres < > sin convertirlos en tags HTML
+
+                    // Buscar el comentario en el DOM o reemplazar placeholder
+                    const commentIterator = document.createNodeIterator(contentEl, NodeFilter.SHOW_COMMENT);
+                    let node;
+                    while ((node = commentIterator.nextNode())) {
+                        if (node.nodeValue === `MERMAID_PLACEHOLDER_${idx}`) {
+                            node.parentNode.replaceChild(targetEl, node);
+                            break;
+                        }
+                    }
+                });
+
+                // 5. Interceptar links internos a archivos .md
                 contentEl.querySelectorAll('a').forEach(link => {
                     const href = link.getAttribute('href');
                     if (href && (href.endsWith('.md') || href.includes('.md#'))) {
@@ -512,10 +531,14 @@
                 loader.style.display = 'none';
                 contentEl.style.display = 'block';
 
-                // 5. Renderizar diagramas de Mermaid
-                await mermaid.run({
-                    nodes: contentEl.querySelectorAll('.mermaid')
-                });
+                // 6. Renderizar diagramas de Mermaid de forma segura
+                try {
+                    await mermaid.run({
+                        nodes: contentEl.querySelectorAll('.mermaid')
+                    });
+                } catch (mErr) {
+                    console.warn("Mermaid render error:", mErr);
+                }
 
                 // Scroll to top
                 document.getElementById('content-wrapper').scrollTop = 0;

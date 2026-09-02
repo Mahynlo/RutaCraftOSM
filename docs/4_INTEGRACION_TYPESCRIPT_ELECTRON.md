@@ -17,10 +17,10 @@ sequenceDiagram
 
     App->>TS: calcularRuta({ puntos: [...] })
     TS->>Cpp: spawn("cli.exe", ["--stdout", "--array", ...])
-    Cpp->>Bin: Carga instantánea (< 1ms)
+    Cpp->>Bin: Carga instantánea (menor a 1ms)
     Cpp->>Cpp: KD-Tree + A* + Instrucciones
     Cpp-->>TS: Emite JSON en stdout (~50ms)
-    TS-->>App: Resuelve Promise<RespuestaRutaCompleta>
+    TS-->>App: Resuelve Promise con RespuestaRutaCompleta
 ```
 
 ---
