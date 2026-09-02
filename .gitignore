@@ -1,17 +1,72 @@
-# Ignorar binarios y carpetas de compilación
-build/
-*.dist
-*.build
-__pycache__
-cache
-nuitka-crash-report.xml
-resultado_ruta.json
+# ==========================================
+# 🐍 Python & Entornos Virtuales
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
 
-#ignorar  de ruta-craft-osm
+# Archivos de Nuitka legacy
+nuitka-crash-report.xml
+*.dist/
+*.build/
+
+# ==========================================
+# ⚡ C++ & Binarios de Compilación
+# ==========================================
+*.o
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.gch
+RutaCraftOSM_c/bin/
+build/
+cmake-build-*/
+.vs/
+.vscode/
+.idea/
+
+# ==========================================
+# 📦 Node.js / NPM (ruta-craft-osm)
+# ==========================================
 node_modules/
 dist/
 package-lock.json
+*.tgz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-#Carpeta de caché de rutas
+# ==========================================
+# 💾 Archivos de Caché y Pruebas Temporales
+# ==========================================
+cache/
+**/cache/
 cache_rutas/
-grafos/
+cache_rutas.json
+cache_rutas.pkl
+cache_resultado.json
+ruta-craft-osm/cache_resultado.json
+ruta-craft-osm/src/cache_resultado.json
+resultado_ruta.json
+salida_test.json
+test_salida_cpp.json
+puntos_test.json
+*.log
+
+# ==========================================
+# 💻 Sistema Operativo
+# ==========================================
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
