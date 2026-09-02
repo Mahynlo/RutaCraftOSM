@@ -76,19 +76,42 @@ body {
     background: var(--surface-card);
     border: 1px solid var(--border);
     color: var(--text-main);
-    padding: 7px 11px;
+    padding: 7px 12px;
     border-radius: 8px;
-    font-size: 0.88rem;
+    font-size: 0.85rem;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
 }
 
 .btn-theme-toggle:hover {
     background: var(--surface-hover);
     border-color: var(--primary);
+}
+
+.btn-theme-toggle:active {
+    transform: scale(0.93);
+}
+
+/* Mobile Responsive Theme Toggle */
+@media (max-width: 768px) {
+    .btn-theme-toggle {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .btn-theme-toggle .theme-label {
+        display: none !important;
+    }
 }
 
 /* Custom Scrollbars */

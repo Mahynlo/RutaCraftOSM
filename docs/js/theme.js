@@ -28,6 +28,7 @@ function applyTheme(mode) {
 
     const resolved = getResolvedTheme();
     document.documentElement.setAttribute('data-theme', resolved);
+    document.documentElement.classList.toggle('dark', resolved === 'dark');
 
     // Actualizar botones de alternancia en la página
     updateThemeButtons();
@@ -81,10 +82,16 @@ if (window.matchMedia) {
 // Aplicar inmediatamente al cargar el script para evitar parpadeos
 applyTheme(currentThemeMode);
 
-// Conectar evento en los botones al cargar el DOM
+// Delegación de eventos para clic/touch garantizado en móviles y desktop
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-theme-toggle');
+    if (btn) {
+        e.preventDefault();
+        cycleTheme();
+    }
+});
+
+// Actualizar textos e iconos al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
     updateThemeButtons();
-    document.querySelectorAll('.btn-theme-toggle').forEach(btn => {
-        btn.addEventListener('click', cycleTheme);
-    });
 });

@@ -31,6 +31,23 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     
+    <!-- Tailwind CSS CDN & Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brandCpp: '#06b6d4',
+                        brandPython: '#f59e0b',
+                        brandPrimary: '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+    
     <!-- Theme Manager -->
     <script src="js/theme.js"></script>
 </head>
