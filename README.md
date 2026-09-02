@@ -102,3 +102,4 @@ Para consultar la guía técnica completa, revisa la carpeta [`docs/`](./docs/RE
 * [🐍 Pipeline de Datos en Python con `uv`](./docs/2_IMPLEMENTACION_PYTHON_UV.md)
 * [⚡ Motor de Ruteo en C++ (`RutaCraftOSM_c`)](./docs/3_MOTOR_CPP_RUTACRAFT.md)
 * [📦 Integración TypeScript y Electron](./docs/4_INTEGRACION_TYPESCRIPT_ELECTRON.md)
+* [🗺️ Visualizador y Comparador Web Interactivo](./docs/visualizacion_ruta.html)

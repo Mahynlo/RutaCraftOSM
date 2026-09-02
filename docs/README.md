@@ -32,6 +32,12 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
    - Interfaces y tipos de TypeScript.
    - Guía de instalación local (`npm link`) y ejemplos de uso.
 
+5. [🗺️ Visualizador y Comparador Web Interactivo](./visualizacion_ruta.html)
+   - Herramienta visual basada en Leaflet para probar el motor de Python vs C++.
+   - Superposición de polilíneas y análisis punto por punto.
+   - Tarjetas de navegación giro a giro en tiempo real.
+   - Abre directamente con doble clic en cualquier navegador web.
+
 ---
 
 ## 📁 Mapa de Carpetas del Proyecto

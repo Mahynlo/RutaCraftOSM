@@ -72,6 +72,9 @@ Diferencia en distancia: 0.00 metros (0.000% de error)
 ============================================================
 ```
 
+> [!TIP]
+> Puedes abrir el **[Visualizador Interactivo y Comparador Web](./visualizacion_ruta.html)** directamente en tu navegador para ver la superposición visual de ambas rutas y comprobar que coinciden al 100% calle por calle.
+
 ---
 
 ## 4. Equivalencia Funcional 1:1
