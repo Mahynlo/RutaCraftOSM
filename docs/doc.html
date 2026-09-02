@@ -69,7 +69,7 @@
             padding: 0 16px;
             align-items: center;
             justify-content: space-between;
-            z-index: 50;
+            z-index: 1000;
         }
 
         .btn-menu-toggle {
@@ -78,8 +78,11 @@
             color: var(--text-main);
             padding: 8px 12px;
             border-radius: 6px;
-            font-size: 1rem;
+            font-size: 1.1rem;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Overlay */
@@ -87,9 +90,9 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.65);
             backdrop-filter: blur(4px);
-            z-index: 90;
+            z-index: 1998;
         }
 
         /* Sidebar */
@@ -101,7 +104,7 @@
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
-            z-index: 100;
+            z-index: 2000;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -433,14 +436,23 @@
                 top: 0;
                 bottom: 0;
                 left: 0;
+                width: 290px;
+                max-width: 85vw;
+                height: 100vh;
+                background: #1e293b;
                 transform: translateX(-100%);
-                box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+                box-shadow: 6px 0 24px rgba(0,0,0,0.6);
+                z-index: 2000;
             }
             #sidebar.open {
-                transform: translateX(0);
+                transform: translateX(0) !important;
             }
             #content-wrapper {
                 padding: 76px 16px 30px;
+                width: 100%;
+            }
+            #btn-close-sidebar {
+                display: flex !important;
             }
             .chapter-pagination {
                 flex-direction: column;
@@ -456,7 +468,7 @@
 
     <!-- Header Móvil -->
     <div class="mobile-header">
-        <button class="btn-menu-toggle" onclick="toggleSidebar()">
+        <button class="btn-menu-toggle" id="btn-open-sidebar" onclick="toggleSidebar(true)" aria-label="Abrir Menú">
             <i class="fa-solid fa-bars"></i>
         </button>
         <span style="font-weight: 800; font-size: 0.95rem;">RutaCraftOSM Docs</span>
