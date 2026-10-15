@@ -22,7 +22,7 @@ RutaCraftOSM_c/include/
 
 ## 2. Especificación del Formato Binario `RCO1`
 
-Para lograr una velocidad de carga de **< 1 ms**, el grafo se empaqueta en una estructura binaria secuencial directa sin overhead de parsing de texto:
+Para cargar rápido (~35 ms el grafo de producción, ver [benchmark](./5_RENDIMIENTO.md)), el grafo se empaqueta en una estructura binaria secuencial directa sin overhead de parsing de texto:
 
 ```
 [0..3]     Magic Number: "RCO1" (4 bytes)

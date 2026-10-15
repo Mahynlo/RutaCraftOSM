@@ -56,7 +56,7 @@ Al ejecutarse, `preparar_grafo.py` genera tres archivos en la carpeta `grafos/`:
 
 | Archivo | Formato | Propósito | Tiempo de Carga |
 | :--- | :--- | :--- | :---: |
-| `grafo_mazatan_villapesqueira.bin` | **Binario RCO1** | Consumo directo por el motor C++ | **< 1 ms** |
+| `grafo_mazatan_villapesqueira.bin` | **Binario RCO1** | Consumo directo por el motor C++ | **~35 ms** |
 | `grafo_mazatan_villapesqueira.json` | **JSON** | Inspección humana, debugging y frontend | ~80 ms |
 | `grafo_mazatan_villapesqueira.pkl` | **Pickle** | Compatibilidad con scripts y tests de Python | ~120 ms |
 

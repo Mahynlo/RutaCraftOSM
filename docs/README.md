@@ -32,7 +32,12 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
    - Interfaces y tipos de TypeScript.
    - Guía de instalación local (`npm link`) y ejemplos de uso.
 
-5. [🗺️ Visualizador y Comparador Web Interactivo](./visualizacion_ruta.html)
+5. [⏱️ Rendimiento del Motor C++](./5_RENDIMIENTO.md)
+   - Tiempos medidos de carga, KD-Tree, A\* y ruta completa (generados con `bench/correr_benchmark.py`).
+   - Escalamiento del grafo rural de producción a la ciudad de Hermosillo.
+   - Calidad de las instrucciones e impacto de las calles de un solo sentido.
+
+6. [🗺️ Visualizador y Comparador Web Interactivo](./visualizacion_ruta.html)
    - Herramienta visual basada en Leaflet para probar el motor de Python vs C++.
    - Superposición de polilíneas y análisis punto por punto.
    - Tarjetas de navegación giro a giro en tiempo real.
@@ -51,6 +56,8 @@ RutaCraftOSM/
 │   ├── 2_IMPLEMENTACION_PYTHON_UV.md
 │   ├── 3_MOTOR_CPP_RUTACRAFT.md
 │   ├── 4_INTEGRACION_TYPESCRIPT_ELECTRON.md
+│   ├── 5_RENDIMIENTO.md        # Generado por RutaCraftOSM_c/bench/correr_benchmark.py
+│   ├── benchmark.json          # Datos crudos del benchmark
 │   ├── index.html              # Portada y portal de documentación
 │   ├── doc.html                # Lector Markdown interactivo
 │   ├── visualizacion_ruta.html # Visualizador Leaflet y comparador de rutas

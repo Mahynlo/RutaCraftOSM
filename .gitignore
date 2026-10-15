@@ -70,3 +70,6 @@ puntos_test.json
 Thumbs.db
 [Dd]esktop.ini
 .DS_Store
+
+# Grafos grandes del benchmark (Hermosillo, Sonora): se generan con generar_grafos_benchmark.py
+RutaCraftOSM/grafos/benchmark/

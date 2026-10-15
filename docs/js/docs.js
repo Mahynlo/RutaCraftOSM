@@ -7,6 +7,7 @@ const CHAPTERS = [
     { file: '2_IMPLEMENTACION_PYTHON_UV.md', title: '2. Pipeline Python (uv)' },
     { file: '3_MOTOR_CPP_RUTACRAFT.md', title: '3. Motor Nativo C++20' },
     { file: '4_INTEGRACION_TYPESCRIPT_ELECTRON.md', title: '4. NPM y Electron' },
+    { file: '5_RENDIMIENTO.md', title: '5. Rendimiento del Motor' },
     { file: 'README.md', title: 'Índice General (README)' }
 ];
 

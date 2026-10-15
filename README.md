@@ -7,9 +7,9 @@
 ## ⚡ Características Principales
 
 * 🧭 **Multi-paradas**: Soporta origen, múltiples paradas intermedias y destino.
-* ⚡ **Ultra Rápido**: Motor nativo en C++20 que calcula rutas multi-parada en **~50 ms** (16x más rápido).
+* ⚡ **Ultra Rápido**: Motor nativo en C++20: una ruta multi-parada tarda **< 1 ms** con el motor persistente y **~50 ms** por llamada con `calcularRuta()` en el grafo de producción ([benchmark](./docs/5_RENDIMIENTO.md)).
 * 🌲 **Snapping $O(\log N)$ con KD-Tree**: Búsqueda del nodo más cercano instantánea sin evaluar linealmente todo el grafo.
-* 📦 **Formato Binario `RCO1`**: Carga de grafos de decenas de miles de nodos en **< 1 ms**.
+* 📦 **Formato Binario `RCO1`**: Carga un grafo de 25 mil nodos en **~35 ms** y uno urbano de 75 mil (Hermosillo) en **~120 ms**.
 * 🧾 **Instrucciones Tipo GPS (*Turn-by-turn*)**: Maniobras de giro (*"Sigue recto"*, *"Gira a la derecha"*), nombres de calles y consolidación de tramos.
 * 🔌 **Integración Transparente con Electron**: Detección automática en entornos de producción empaquetados (`app.asar.unpacked`).
 * 🐍 **Gestión Moderna con `uv`**: Extracción y preparación de datos geográficos reproducible y rápida.
@@ -25,7 +25,8 @@ RutaCraftOSM/
 │   ├── 1_ARQUITECTURA_Y_MIGRACION.md # Arquitectura y benchmarks Python vs C++
 │   ├── 2_IMPLEMENTACION_PYTHON_UV.md # Pipeline de datos con uv y OSMnx
 │   ├── 3_MOTOR_CPP_RUTACRAFT.md      # Motor nativo C++, KD-Tree y A*
-│   └── 4_INTEGRACION_TYPESCRIPT_ELECTRON.md # Wrapper npm y Electron
+│   ├── 4_INTEGRACION_TYPESCRIPT_ELECTRON.md # Wrapper npm y Electron
+│   └── 5_RENDIMIENTO.md        # Benchmark del motor C++ (generado)
 │
 ├── RutaCraftOSM_c/             # ⚡ Motor de Ruteo en C++20
 │   ├── include/                # Cabeceras (kdtree, astar, grafo, cache, etc.)
@@ -122,4 +123,5 @@ Para consultar la guía técnica completa, revisa la carpeta [`docs/`](./docs/RE
 * [🐍 Pipeline de Datos en Python con `uv`](./docs/2_IMPLEMENTACION_PYTHON_UV.md)
 * [⚡ Motor de Ruteo en C++ (`RutaCraftOSM_c`)](./docs/3_MOTOR_CPP_RUTACRAFT.md)
 * [📦 Integración TypeScript y Electron](./docs/4_INTEGRACION_TYPESCRIPT_ELECTRON.md)
+* [⏱️ Rendimiento del Motor C++](./docs/5_RENDIMIENTO.md)
 * [🗺️ Visualizador y Comparador Web Interactivo](./docs/visualizacion_ruta.html)

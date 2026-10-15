@@ -11,9 +11,13 @@ from shapely.ops import unary_union
 if sys.stdout:
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-def exportar_grafo_binario(G, salida_bin):
+def exportar_grafo_binario(G, salida_bin, respetar_sentido=False):
     """
     Exporta un grafo NetworkX a formato binario (.bin) optimizado para C++.
+
+    Con respetar_sentido=False (comportamiento histórico) cada arista se agrega también en
+    sentido contrario, por lo que se ignoran las calles de un solo sentido. Con True se
+    exportan solo las aristas que trae OSMnx, que ya incluye ambos sentidos en calles de doble sentido.
     """
     nodes = list(G.nodes)
     node_to_idx = {node_id: i for i, node_id in enumerate(nodes)}
@@ -57,7 +61,8 @@ def exportar_grafo_binario(G, salida_bin):
                 tipo_via = "road"
 
             adj[u_idx].append((v_idx, peso, nombre, tipo_via))
-            adj[v_idx].append((u_idx, peso, nombre, tipo_via)) # Bidireccional si se requiere
+            if not respetar_sentido:
+                adj[v_idx].append((u_idx, peso, nombre, tipo_via))
 
         # Escribir aristas
         for i in range(num_nodos):
