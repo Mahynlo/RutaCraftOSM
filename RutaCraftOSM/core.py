@@ -236,6 +236,21 @@ def calcular_instrucciones(coords, ruta_nodos):
     distancia_total = 0
     anterior = None
 
+    if len(ruta_nodos) < 2:
+        return instrucciones, 0
+
+    # El primer tramo (nodo 0 -> nodo 1) no tiene giro previo: se toma como "Sigue recto"
+    coord_ini, coord_sig = coords[ruta_nodos[0]], coords[ruta_nodos[1]]
+    dist_inicial = haversine(coord_ini, coord_sig)
+    distancia_total += dist_inicial
+    anterior = {
+        "accion": "Sigue recto",
+        "calle": "desconocida",
+        "desde": coord_ini,
+        "hacia": coord_sig,
+        "distancia_m": round(dist_inicial, 1)
+    }
+
     for i in range(1, len(ruta_nodos) - 1):
         u, v, w = ruta_nodos[i - 1], ruta_nodos[i], ruta_nodos[i + 1]
         coord_u, coord_v, coord_w = coords[u], coords[v], coords[w]

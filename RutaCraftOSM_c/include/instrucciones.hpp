@@ -27,8 +27,18 @@ public:
             return {instrucciones, 0.0};
         }
 
-        Instruccion anterior;
-        bool tiene_anterior = false;
+        // El primer tramo (nodo 0 -> nodo 1) no tiene giro previo: se toma como "Sigue recto"
+        double dist_inicial = haversine(grafo.coords[ruta_nodos[0]], grafo.coords[ruta_nodos[1]]);
+        distancia_total += dist_inicial;
+
+        Instruccion anterior {
+            "Sigue recto",
+            buscar_nombre_calle(grafo, ruta_nodos[0], ruta_nodos[1]),
+            grafo.coords[ruta_nodos[0]],
+            grafo.coords[ruta_nodos[1]],
+            std::round(dist_inicial * 10.0) / 10.0
+        };
+        bool tiene_anterior = true;
 
         for (size_t i = 1; i + 1 < ruta_nodos.size(); ++i) {
             int u = ruta_nodos[i - 1];
@@ -79,20 +89,6 @@ public:
 
         if (tiene_anterior) {
             instrucciones.push_back(anterior);
-        } else if (ruta_nodos.size() == 2) {
-            // Caso de ruta corta de solo 2 nodos
-            int u = ruta_nodos[0];
-            int v = ruta_nodos[1];
-            double dist = haversine(grafo.coords[u], grafo.coords[v]);
-            distancia_total += dist;
-            std::string nombre_calle = buscar_nombre_calle(grafo, u, v);
-            instrucciones.push_back({
-                "Sigue recto",
-                nombre_calle,
-                grafo.coords[u],
-                grafo.coords[v],
-                std::round(dist * 10.0) / 10.0
-            });
         }
 
         return {instrucciones, std::round(distancia_total * 10.0) / 10.0};

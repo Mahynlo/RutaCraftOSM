@@ -1,6 +1,6 @@
 # ⚡ 3. Motor de Ruteo en C++ (`RutaCraftOSM_c`)
 
-El motor en C++17 implementa un sistema de navegación y cálculo de rutas autónomo de alto rendimiento, libre de dependencias externas.
+El motor en C++20 implementa un sistema de navegación y cálculo de rutas autónomo de alto rendimiento, libre de dependencias externas.
 
 ---
 

@@ -19,7 +19,7 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
    - Exportadores a formatos `.bin`, `.pkl` y `.json`.
 
 3. [⚡ Motor de Ruteo en C++ (`RutaCraftOSM_c`)](./3_MOTOR_CPP_RUTACRAFT.md)
-   - Arquitectura modular del código C++17.
+   - Arquitectura modular del código C++20.
    - Estructura y especificación del formato binario `RCO1`.
    - Búsqueda espacial $O(\log N)$ con KD-Tree.
    - Algoritmo A\* con heurística euclidiana plana en memoria contigua.

@@ -208,13 +208,16 @@ int main(int argc, char* argv[]) {
         }
 
         if (segmento.empty()) {
-            std::cerr << "Error(py): No se encontro ruta entre " << u_osm << " y " << v_osm << "\n";
+            // Continuar uniría tramos no conectados con un salto en línea recta
+            std::cerr << "Error(py): No se encontro ruta entre " << u_osm << " y " << v_osm
+                      << " (puntos " << i - 1 << " y " << i << ")\n";
+            return 1;
+        }
+
+        if (i == 1) {
+            ruta_nodos.insert(ruta_nodos.end(), segmento.begin(), segmento.end());
         } else {
-            if (i == 1) {
-                ruta_nodos.insert(ruta_nodos.end(), segmento.begin(), segmento.end());
-            } else {
-                ruta_nodos.insert(ruta_nodos.end(), segmento.begin() + 1, segmento.end());
-            }
+            ruta_nodos.insert(ruta_nodos.end(), segmento.begin() + 1, segmento.end());
         }
     }
 

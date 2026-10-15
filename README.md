@@ -1,13 +1,13 @@
 # 🚗 RutaCraftOSM (Calculadora de Rutas de Alto Rendimiento con OSM)
 
-**RutaCraftOSM** es un motor de navegación y cálculo de rutas óptimas 100% offline basado en grafos viales de OpenStreetMap (OSM). Integra un pipeline de datos geográficos en Python gestionado con **`uv`**, un **motor de alto rendimiento en C++17** con indexación espacial **KD-Tree** y un **wrapper tipado en TypeScript/npm** listo para aplicaciones de escritorio en **Electron** y **Node.js**.
+**RutaCraftOSM** es un motor de navegación y cálculo de rutas óptimas 100% offline basado en grafos viales de OpenStreetMap (OSM). Integra un pipeline de datos geográficos en Python gestionado con **`uv`**, un **motor de alto rendimiento en C++20** con indexación espacial **KD-Tree** y un **wrapper tipado en TypeScript/npm** listo para aplicaciones de escritorio en **Electron** y **Node.js**.
 
 ---
 
 ## ⚡ Características Principales
 
 * 🧭 **Multi-paradas**: Soporta origen, múltiples paradas intermedias y destino.
-* ⚡ **Ultra Rápido**: Motor nativo en C++17 que calcula rutas multi-parada en **~50 ms** (16x más rápido).
+* ⚡ **Ultra Rápido**: Motor nativo en C++20 que calcula rutas multi-parada en **~50 ms** (16x más rápido).
 * 🌲 **Snapping $O(\log N)$ con KD-Tree**: Búsqueda del nodo más cercano instantánea sin evaluar linealmente todo el grafo.
 * 📦 **Formato Binario `RCO1`**: Carga de grafos de decenas de miles de nodos en **< 1 ms**.
 * 🧾 **Instrucciones Tipo GPS (*Turn-by-turn*)**: Maniobras de giro (*"Sigue recto"*, *"Gira a la derecha"*), nombres de calles y consolidación de tramos.
@@ -27,11 +27,11 @@ RutaCraftOSM/
 │   ├── 3_MOTOR_CPP_RUTACRAFT.md      # Motor nativo C++, KD-Tree y A*
 │   └── 4_INTEGRACION_TYPESCRIPT_ELECTRON.md # Wrapper npm y Electron
 │
-├── RutaCraftOSM_c/             # ⚡ Motor de Ruteo en C++17
+├── RutaCraftOSM_c/             # ⚡ Motor de Ruteo en C++20
 │   ├── include/                # Cabeceras (kdtree, astar, grafo, cache, etc.)
 │   ├── src/main.cpp            # CLI principal
-│   ├── bin/cli.exe             # Binario estático compilado
-│   ├── tests/                  # Pruebas unitarias en C++
+│   ├── bin/cli.exe             # Binario estático compilado (generado, no versionado)
+│   ├── tests/                  # Pruebas del CLI C++ (Python unittest)
 │   └── build.bat               # Compilador con g++ (-O3, -static)
 │
 ├── RutaCraftOSM/               # 🐍 Pipeline de Datos en Python (con uv)
