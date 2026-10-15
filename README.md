@@ -31,8 +31,9 @@ RutaCraftOSM/
 │   ├── include/                # Cabeceras (kdtree, astar, grafo, cache, etc.)
 │   ├── src/main.cpp            # CLI principal
 │   ├── bin/cli.exe             # Binario estático compilado (generado, no versionado)
-│   ├── tests/                  # Pruebas del CLI C++ (Python unittest)
-│   └── build.bat               # Compilador con g++ (-O3, -static)
+│   ├── tests/                  # Pruebas del CLI C++ y paridad con Python (unittest)
+│   ├── CMakeLists.txt          # Build multiplataforma (MinGW, MSVC, GCC)
+│   └── build.bat               # Atajo con g++ (-O3, -static)
 │
 ├── RutaCraftOSM/               # 🐍 Pipeline de Datos en Python (con uv)
 │   ├── geodatos/               # Polígonos GeoJSON
@@ -63,8 +64,10 @@ uv run python preparar_grafo.py
 ### 2. Compilar el Motor en C++
 ```powershell
 cd ../RutaCraftOSM_c
-.\build.bat
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release   # genera bin/cli.exe (o bin/cli en Linux)
 ```
+En Windows con MinGW también sirve el atajo `.\build.bat`. Después copia `bin/cli.exe` a `ruta-craft-osm/bin/cli/` para actualizar el paquete npm.
 
 ### 3. Usar en tu proyecto Node.js / Electron
 ```powershell
@@ -92,6 +95,23 @@ const respuesta = await calcularRuta({
 console.log(`Distancia: ${respuesta.resultado.distancia_total_km} km`);
 console.log(respuesta.resultado.instrucciones);
 ```
+
+---
+
+## 🧪 Pruebas
+
+```powershell
+# Motor C++: CLI, modo servidor, caché y paridad de ruta/distancia con el motor Python
+python -m unittest RutaCraftOSM_c/tests/test_cpp_cli.py
+
+# Motor Python (desde RutaCraftOSM/)
+python -m unittest tests/test_cli.py tests/test_cli_errores.py
+
+# Wrapper TypeScript (desde ruta-craft-osm/)
+npm test
+```
+
+GitHub Actions ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) compila el motor en Windows y Linux, corre las tres suites en cada push a `main` y en cada pull request, y prueba el wrapper con el binario recién compilado.
 
 ---
 

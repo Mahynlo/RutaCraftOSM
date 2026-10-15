@@ -29,7 +29,9 @@ std::string obtener_directorio_ejecutable() {
     GetModuleFileNameA(NULL, buffer, MAX_PATH);
     return fs::path(buffer).parent_path().string();
 #else
-    return fs::current_path().string();
+    std::error_code ec;
+    fs::path exe = fs::read_symlink("/proc/self/exe", ec);
+    return ec ? fs::current_path().string() : exe.parent_path().string();
 #endif
 }
 

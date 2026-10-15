@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  motor:
+    name: Motor C++ y Python (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compilar motor C++
+        run: |
+          cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build RutaCraftOSM_c/build --config Release
+
+      - name: Pruebas del motor C++ (incluye paridad con Python)
+        run: python -m unittest RutaCraftOSM_c/tests/test_cpp_cli.py -v
+
+      - name: Pruebas del motor Python
+        working-directory: RutaCraftOSM
+        run: python -m unittest tests/test_cli.py tests/test_cli_errores.py -v
+
+      - name: Publicar binario de Windows
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-windows
+          path: RutaCraftOSM_c/bin/cli.exe
+
+  npm:
+    name: Wrapper TypeScript (Windows)
+    needs: motor
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Usar el binario recién compilado
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-windows
+          path: ruta-craft-osm/bin/cli
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar y probar
+        working-directory: ruta-craft-osm
+        run: |
+          npm install
+          npm test

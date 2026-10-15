@@ -70,7 +70,8 @@ RutaCraftOSM/
 │   ├── src/main.cpp            # CLI principal de C++
 │   ├── bin/cli.exe             # Ejecutable compilado autónomo
 │   ├── tests/                  # Pruebas automatizadas del motor C++
-│   └── build.bat               # Script de compilación estática
+│   ├── CMakeLists.txt          # Build multiplataforma
+│   └── build.bat               # Script de compilación estática (MinGW)
 │
 ├── ruta-craft-osm/             # Paquete npm para Node.js y Electron
 │   ├── bin/cli/                # cli.exe nativo y grafo binario

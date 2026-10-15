@@ -13,7 +13,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node src/test-calcularRuta.cjs"
+    "test": "npm run build && node --test src/test-motor.cjs",
+    "demo": "npm run build && node src/test-calcularRuta.cjs"
   },
   "keywords": [],
   "author": "",

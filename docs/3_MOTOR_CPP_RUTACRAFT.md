@@ -89,16 +89,17 @@ En [`instrucciones.hpp`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_c
 
 ## 6. Compilación del Motor
 
-Para compilar el ejecutable estático autónomo `bin/cli.exe`:
+Para compilar el ejecutable estático autónomo `bin/cli.exe` con CMake (MinGW, MSVC o GCC en Linux):
 
 ```powershell
 cd RutaCraftOSM_c
-.\build.bat
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 ```
 
-Comando directo con `g++`:
+Atajo en Windows con MinGW (`build.bat`), equivalente a:
 ```powershell
-g++ -O3 -std=c++17 -static -Iinclude src/main.cpp -o bin/cli.exe
+g++ -O3 -std=c++20 -static -Iinclude src/main.cpp -o bin/cli.exe
 ```
 * **Tamaño final**: ~3.5 MB
 * **Dependencias**: Cero DLLs externas.
