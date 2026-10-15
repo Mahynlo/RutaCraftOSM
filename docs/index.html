@@ -48,6 +48,7 @@
                 <a href="doc.html?doc=2_IMPLEMENTACION_PYTHON_UV.md" class="nav-link">Python (uv)</a>
                 <a href="doc.html?doc=3_MOTOR_CPP_RUTACRAFT.md" class="nav-link">Motor C++</a>
                 <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="nav-link">NPM / Electron</a>
+                <a href="doc.html?doc=5_RENDIMIENTO.md" class="nav-link">Rendimiento</a>
                 <a href="visualizacion_ruta.html" class="btn-cta">
                     <i class="fa-solid fa-map-location-dot"></i>
                     Visualizador Interactivo
@@ -101,34 +102,34 @@
         <section class="benchmark-card">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div>
-                    <h2 style="font-size: 1.4rem; font-weight: 800;">⚡ Benchmark Comparativo: Python vs C++20</h2>
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">Prueba real calculando 23 paradas GPS continuas</p>
+                    <h2 style="font-size: 1.4rem; font-weight: 800;">⚡ Rendimiento del Motor C++20</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Ruta municipal de 23 paradas (Mazatán - Villa Pesqueira) · medido el 2026-10-14</p>
                 </div>
-                <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;">
-                    16.0x más rápido
-                </span>
+                <a href="doc.html?doc=5_RENDIMIENTO.md" style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; text-decoration: none;">
+                    Ver benchmark completo <i class="fa-solid fa-arrow-right"></i>
+                </a>
             </div>
 
             <div class="bench-grid">
                 <div class="stat-box">
-                    <div class="stat-label">Tiempo C++20</div>
-                    <div class="stat-num" style="color: var(--cpp);">56.7 ms</div>
-                    <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">Carga binaria &lt; 1ms</div>
+                    <div class="stat-label">Motor persistente</div>
+                    <div class="stat-num" style="color: var(--cpp);">0.67 ms</div>
+                    <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">Por ruta, grafo ya cargado</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Tiempo Python</div>
-                    <div class="stat-num" style="color: var(--python);">910.1 ms</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">Escaneo lineal O(N)</div>
+                    <div class="stat-label">calcularRuta()</div>
+                    <div class="stat-num" style="color: var(--primary);">56 ms</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Incluye arrancar cli.exe y cargar el grafo</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Distancia Total</div>
-                    <div class="stat-num">14.68 km</div>
-                    <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">Error: 0.00% (Exacto)</div>
+                    <div class="stat-label">Ciudad de Hermosillo</div>
+                    <div class="stat-num" style="color: var(--python);">3–5 ms</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Por ruta en un grafo de 75 mil nodos</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Consumo de RAM</div>
-                    <div class="stat-num" style="color: var(--purple);">&lt; 15 MB</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">Memoria contigua</div>
+                    <div class="stat-num" style="color: var(--purple);">16 MB</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">47 MB con el grafo de Hermosillo</div>
                 </div>
             </div>
         </section>
@@ -141,7 +142,7 @@
                 <div>
                     <div class="doc-icon icon-blue"><i class="fa-solid fa-sitemap"></i></div>
                     <div class="doc-title">1. Arquitectura y Migración</div>
-                    <div class="doc-desc">Análisis profundo de la arquitectura por capas, por qué se migró a C++ y reporte completo de benchmarks.</div>
+                    <div class="doc-desc">Arquitectura por capas, por qué se migró a C++ y validación de que ambos motores dan la misma ruta.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
@@ -150,7 +151,7 @@
                 <div>
                     <div class="doc-icon icon-yellow"><i class="fa-brands fa-python"></i></div>
                     <div class="doc-title">2. Pipeline Python (uv)</div>
-                    <div class="doc-desc">Descarga de límites con OSMnx, unión con Shapely y exportación automática a formatos binario .bin, .json y .pkl.</div>
+                    <div class="doc-desc">Descarga de calles con OSMnx, exportación a .bin, .json y .pkl, y opción para respetar calles de un solo sentido.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
@@ -159,7 +160,7 @@
                 <div>
                     <div class="doc-icon icon-cyan"><i class="fa-solid fa-microchip"></i></div>
                     <div class="doc-title">3. Motor Nativo C++20</div>
-                    <div class="doc-desc">Estructura del formato binario RCO1, búsqueda espacial con KD-Tree 2D, algoritmo A* y compilación con g++.</div>
+                    <div class="doc-desc">Formato binario RCO1, KD-Tree 2D, algoritmo A*, compilación con CMake y referencia de la CLI.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
@@ -168,7 +169,16 @@
                 <div>
                     <div class="doc-icon icon-purple"><i class="fa-brands fa-node-js"></i></div>
                     <div class="doc-title">4. Integración NPM / Electron</div>
-                    <div class="doc-desc">Uso del wrapper TypeScript ruta-craft-osm, tipos e interfaces, y soporte automático de producción con app.asar.unpacked.</div>
+                    <div class="doc-desc">calcularRuta() y motor persistente crearMotorRutas(), tipos de TypeScript y empaquetado con app.asar.unpacked.</div>
+                </div>
+                <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
+            <a href="doc.html?doc=5_RENDIMIENTO.md" class="doc-card">
+                <div>
+                    <div class="doc-icon icon-green"><i class="fa-solid fa-gauge-high"></i></div>
+                    <div class="doc-title">5. Rendimiento del Motor</div>
+                    <div class="doc-desc">Tiempos medidos de carga, KD-Tree y A* en el grafo de producción y en la ciudad de Hermosillo, e impacto de los sentidos de las calles.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
@@ -179,7 +189,7 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 50px; flex-wrap: wrap; gap: 10px;">
             <div>
                 <h2 style="font-size: 1.4rem; font-weight: 800;">💻 Ejemplos Rápidos de Integración</h2>
-                <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Usa el motor de rutas desde TypeScript, Node.js, Electron o la terminal de Python</p>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Usa el motor de rutas desde TypeScript, Electron o directamente desde la terminal</p>
             </div>
             <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" style="color: var(--primary); font-size: 0.85rem; font-weight: 700; text-decoration: none;">
                 Ver documentación de la API <i class="fa-solid fa-arrow-right"></i>
@@ -199,10 +209,10 @@
                             <i class="fa-brands fa-js" style="color: #3178c6;"></i> TypeScript (ESM)
                         </button>
                         <button class="code-tab-btn" data-tab="cjs" onclick="switchCodeTab('cjs')">
-                            <i class="fa-brands fa-node-js" style="color: #68a063;"></i> Node / Electron
+                            <i class="fa-brands fa-node-js" style="color: #68a063;"></i> Electron (persistente)
                         </button>
                         <button class="code-tab-btn" data-tab="py" onclick="switchCodeTab('py')">
-                            <i class="fa-brands fa-python" style="color: #f59e0b;"></i> Python (uv)
+                            <i class="fa-solid fa-terminal" style="color: #f59e0b;"></i> CLI (cli.exe)
                         </button>
                         <button class="code-tab-btn" data-tab="json" onclick="switchCodeTab('json')">
                             <i class="fa-solid fa-code" style="color: #38bdf8;"></i> Salida JSON
@@ -217,81 +227,72 @@
             <!-- Tab 1: TypeScript -->
             <pre class="code-panel active" id="panel-ts"><code><span class="token-kw">import</span> { <span class="token-fn">calcularRuta</span>, <span class="token-type">RespuestaRutaCompleta</span> } <span class="token-kw">from</span> <span class="token-str">'ruta-craft-osm'</span>;
 
-<span class="token-com">// Cálculo de ruta óptima multi-parada con C++ nativo</span>
+<span class="token-com">// Cálculo de ruta multi-parada con el motor C++ nativo</span>
 <span class="token-kw">const</span> respuesta: <span class="token-type">RespuestaRutaCompleta</span> = <span class="token-kw">await</span> <span class="token-fn">calcularRuta</span>({
   puntos: [
     [<span class="token-num">29.065639</span>, <span class="token-num">-110.056448</span>], <span class="token-com">// Origen (A)</span>
     [<span class="token-num">29.062039</span>, <span class="token-num">-110.059091</span>], <span class="token-com">// Parada 1</span>
     [<span class="token-num">29.059486</span>, <span class="token-num">-110.053973</span>], <span class="token-com">// Parada 2</span>
     [<span class="token-num">29.118091</span>, <span class="token-num">-109.970340</span>]  <span class="token-com">// Destino (B)</span>
-  ],
-  cachePath: <span class="token-str">'./cache_rutas.json'</span>
+  ]
 });
 
-<span class="token-fn">console</span>.<span class="token-fn">log</span>(<span class="token-str">`⚡ Distancia: <span class="token-type">${respuesta.resultado.distancia_total_km}</span> km`</span>);
-<span class="token-fn">console</span>.<span class="token-fn">log</span>(<span class="token-str">`📍 Puntos polilínea: <span class="token-type">${respuesta.resultado.ruta_coordenadas.length}</span>`</span>);
-<span class="token-fn">console</span>.<span class="token-fn">log</span>(respuesta.resultado.instrucciones[<span class="token-num">0</span>]); <span class="token-com">// { accion: "Sigue recto", calle: "...", distancia_m: 466.3 }</span></code></pre>
+<span class="token-fn">console</span>.<span class="token-fn">log</span>(<span class="token-str">`Distancia: <span class="token-type">${respuesta.resultado.distancia_total_km}</span> km`</span>);
+<span class="token-fn">console</span>.<span class="token-fn">log</span>(<span class="token-str">`Puntos polilínea: <span class="token-type">${respuesta.resultado.ruta.length}</span>`</span>);
+<span class="token-fn">console</span>.<span class="token-fn">log</span>(respuesta.resultado.instrucciones[<span class="token-num">0</span>]); <span class="token-com">// { accion: "Sigue recto", calle: "...", distancia_m: ... }</span></code></pre>
 
-            <!-- Tab 2: CommonJS / Electron -->
-            <pre class="code-panel" id="panel-cjs"><code><span class="token-kw">const</span> { <span class="token-fn">calcularRuta</span> } = <span class="token-fn">require</span>(<span class="token-str">'ruta-craft-osm'</span>);
+            <!-- Tab 2: Electron con motor persistente -->
+            <pre class="code-panel" id="panel-cjs"><code><span class="token-kw">const</span> { <span class="token-fn">app</span>, <span class="token-fn">ipcMain</span> } = <span class="token-fn">require</span>(<span class="token-str">'electron'</span>);
+<span class="token-kw">const</span> path = <span class="token-fn">require</span>(<span class="token-str">'path'</span>);
+<span class="token-kw">const</span> { <span class="token-fn">crearMotorRutas</span> } = <span class="token-fn">require</span>(<span class="token-str">'ruta-craft-osm'</span>);
 
-<span class="token-com">// Compatible con procesos Main y Renderer (Preload) en Electron</span>
-<span class="token-kw">async function</span> <span class="token-fn">obtenerTrazado</span>() {
-  <span class="token-kw">const</span> respuesta = <span class="token-kw">await</span> <span class="token-fn">calcularRuta</span>({
-    puntos: [
-      [<span class="token-num">29.065639</span>, <span class="token-num">-110.056448</span>],
-      [<span class="token-num">29.118091</span>, <span class="token-num">-109.970340</span>]
-    ]
-  });
+<span class="token-com">// Proceso main: un solo motor con el grafo cargado en memoria (&lt; 1 ms por ruta)</span>
+<span class="token-kw">const</span> motor = <span class="token-fn">crearMotorRutas</span>({
+  cachePath: path.<span class="token-fn">join</span>(app.<span class="token-fn">getPath</span>(<span class="token-str">'userData'</span>), <span class="token-str">'cache_rutas.json'</span>)
+});
 
-  <span class="token-kw">if</span> (respuesta.exito) {
-    <span class="token-com">// Renderizar en Leaflet / Mapbox</span>
-    <span class="token-fn">dibujarRutaEnMapa</span>(respuesta.resultado.ruta_coordenadas);
-  }
-}</code></pre>
+ipcMain.<span class="token-fn">handle</span>(<span class="token-str">'calcular-ruta'</span>, (_evento, puntos) =&gt; motor.<span class="token-fn">calcular</span>(puntos));
 
-            <!-- Tab 3: Python CLI -->
-            <pre class="code-panel" id="panel-py"><code><span class="token-com"># Ejecutar cálculo de prueba directamente desde la terminal con uv</span>
-<span class="token-cmd">uv run python -m RutaCraftOSM.cli</span> \
-  --mapa-bin "datos/sonora_rutas.bin" \
-  --puntos "29.0656,-110.0564;29.0620,-110.0590;29.1180,-109.9703" \
-  --salida "resultado_ruta.json"
+<span class="token-com">// Guardar el caché al salir</span>
+app.<span class="token-fn">on</span>(<span class="token-str">'before-quit'</span>, () =&gt; motor.<span class="token-fn">cerrar</span>());</code></pre>
 
-<span class="token-com"># O desde script de Python</span>
-<span class="token-kw">from</span> RutaCraftOSM.motor_ruta <span class="token-kw">import</span> MotorRutaCraft
+            <!-- Tab 3: CLI -->
+            <pre class="code-panel" id="panel-py"><code><span class="token-com"># Desde ruta-craft-osm/bin/cli/ (el grafo está en grafos/ junto al ejecutable)</span>
+<span class="token-cmd">.\cli.exe</span> --array 29.065639 -110.056448 29.059486 -110.053973 --sin-cache
 
-motor = MotorRutaCraft(<span class="token-str">"datos/sonora_rutas.bin"</span>)
-resultado = motor.calcular_ruta_multiparada([
-    (<span class="token-num">29.065639</span>, <span class="token-num">-110.056448</span>),
-    (<span class="token-num">29.118091</span>, <span class="token-num">-109.970340</span>)
-])
-<span class="token-fn">print</span>(<span class="token-str">f"Distancia: {resultado['distancia_total_km']} km"</span>)</code></pre>
+<span class="token-com"># Puntos desde un archivo JSON y resultado en otro archivo</span>
+<span class="token-cmd">.\cli.exe</span> --puntos paradas.json --salida ruta.json
+
+<span class="token-com"># Modo servidor: una petición JSON por línea en stdin</span>
+<span class="token-str">'{"id":1,"puntos":[[29.065639,-110.056448],[29.059486,-110.053973]]}'</span> | <span class="token-cmd">.\cli.exe</span> --serve --sin-cache</code></pre>
 
             <!-- Tab 4: JSON Output -->
-            <pre class="code-panel" id="panel-json"><code>{
-  <span class="token-prop">"exito"</span>: <span class="token-kw">true</span>,
-  <span class="token-prop">"origen"</span>: <span class="token-str">"motor_cpp_nativo"</span>,
-  <span class="token-prop">"resultado"</span>: {
-    <span class="token-prop">"distancia_total_km"</span>: <span class="token-num">14.68</span>,
-    <span class="token-prop">"total_puntos_polilinea"</span>: <span class="token-num">458</span>,
-    <span class="token-prop">"tiempo_calculo_ms"</span>: <span class="token-num">56.7</span>,
-    <span class="token-prop">"ruta_coordenadas"</span>: [
-      [<span class="token-num">29.065836</span>, <span class="token-num">-110.056719</span>],
-      [<span class="token-num">29.065648</span>, <span class="token-num">-110.056875</span>]
-    ],
-    <span class="token-prop">"instrucciones"</span>: [
-      {
-        <span class="token-prop">"accion"</span>: <span class="token-str">"Sigue recto"</span>,
-        <span class="token-prop">"calle"</span>: <span class="token-str">"Carretera Sahuaripa - Hermosillo"</span>,
-        <span class="token-prop">"distancia_m"</span>: <span class="token-num">466.3</span>
-      },
-      {
-        <span class="token-prop">"accion"</span>: <span class="token-str">"Gira a la derecha"</span>,
-        <span class="token-prop">"calle"</span>: <span class="token-str">"Calle Principal"</span>,
-        <span class="token-prop">"distancia_m"</span>: <span class="token-num">7.2</span>
-      }
-    ]
-  }
+            <pre class="code-panel" id="panel-json"><code><span class="token-com">// Salida real de: .\cli.exe --array 29.065639 -110.056448 29.059486 -110.053973</span>
+{
+  <span class="token-prop">"distancia_total_km"</span>: <span class="token-num">1.16</span>,
+  <span class="token-prop">"distancia_total_m"</span>: <span class="token-num">1155.7</span>,
+  <span class="token-prop">"puntos_gps"</span>: [[<span class="token-num">29.065639</span>, <span class="token-num">-110.056448</span>], [<span class="token-num">29.059486</span>, <span class="token-num">-110.053973</span>]],
+  <span class="token-prop">"ruta"</span>: [
+    [<span class="token-num">29.0658362</span>, <span class="token-num">-110.0567195</span>],
+    [<span class="token-num">29.0656486</span>, <span class="token-num">-110.0568751</span>],
+    <span class="token-com">// ... 54 puntos en total</span>
+  ],
+  <span class="token-prop">"instrucciones"</span>: [
+    {
+      <span class="token-prop">"accion"</span>: <span class="token-str">"Sigue recto"</span>,
+      <span class="token-prop">"calle"</span>: <span class="token-str">"desconocida"</span>,
+      <span class="token-prop">"desde"</span>: [<span class="token-num">29.0658362</span>, <span class="token-num">-110.0567195</span>],
+      <span class="token-prop">"hacia"</span>: [<span class="token-num">29.0611066</span>, <span class="token-num">-110.0587151</span>],
+      <span class="token-prop">"distancia_m"</span>: <span class="token-num">607.7</span>
+    },
+    {
+      <span class="token-prop">"accion"</span>: <span class="token-str">"Gira a la izquierda"</span>,
+      <span class="token-prop">"calle"</span>: <span class="token-str">"Calle Ignacio Soto"</span>,
+      <span class="token-prop">"desde"</span>: [<span class="token-num">29.0611066</span>, <span class="token-num">-110.0587151</span>],
+      <span class="token-prop">"hacia"</span>: [<span class="token-num">29.0610793</span>, <span class="token-num">-110.0585796</span>],
+      <span class="token-prop">"distancia_m"</span>: <span class="token-num">13.5</span>
+    }
+  ]
 }</code></pre>
         </div>
 

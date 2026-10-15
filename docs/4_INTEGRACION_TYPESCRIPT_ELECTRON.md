@@ -34,7 +34,7 @@ sequenceDiagram
     App->>TS: crearMotorRutas({ cachePath })
     App->>TS: motor.calcular([...])
     TS->>Cpp: spawn (solo la primera vez) + {"id":1,"puntos":[...]}
-    Cpp-->>TS: {"id":1,"ok":true,"resultado":{...}} (~0.5ms)
+    Cpp-->>TS: {"id":1,"ok":true,"resultado":{...}} (< 1 ms)
     TS-->>App: Resuelve Promise con ResultadoRuta
     App->>TS: motor.cerrar()
     TS->>Cpp: Cierra stdin → guarda caché y termina
@@ -44,14 +44,17 @@ sequenceDiagram
 | :--- | :--- | :--- |
 | Proceso | Uno nuevo por llamada | Uno persistente |
 | Carga de grafo + KD-Tree | En cada llamada | Una sola vez |
-| Tiempo por ruta (zona Mazatán–Villa Pesqueira) | ~65 ms | ~0.5 ms |
+| Tiempo por ruta, Mazatán - Villa Pesqueira (25 mil nodos) | ~50–56 ms | ~0.07–0.7 ms |
+| Tiempo por ruta, ciudad de Hermosillo (75 mil nodos) | ~160–170 ms | ~3–5 ms |
 | Caché en disco | Se lee y guarda en cada llamada | Se lee al iniciar, se guarda en `cerrar()` |
+
+Cifras medidas en [5. Rendimiento del Motor C++](./5_RENDIMIENTO.md). Como la mayor parte del tiempo de `calcularRuta()` es arrancar el proceso y cargar el grafo, en Electron conviene usar el motor persistente.
 
 ---
 
 ## 2. Detección Automática de Entorno (Electron vs Node)
 
-En [`src/index.ts`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_craft/RutaCraftOSM/ruta-craft-osm/src/index.ts), la función `getCliExePath()` resuelve el binario relativo al propio paquete. Si la ruta pasa por `app.asar` (Electron empaquetado en producción), la redirige a `app.asar.unpacked`, porque un ejecutable no puede lanzarse desde dentro del archivo `.asar`:
+En [`src/index.ts`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/ruta-craft-osm/src/index.ts), la función `getCliExePath()` resuelve el binario relativo al propio paquete. Si la ruta pasa por `app.asar` (Electron empaquetado en producción), la redirige a `app.asar.unpacked`, porque un ejecutable no puede lanzarse desde dentro del archivo `.asar`:
 
 ```typescript
 function getCliExePath(): string {
@@ -116,12 +119,19 @@ export interface RespuestaRutaCompleta {
 # 1. Ubicarse en la carpeta del paquete
 cd ruta-craft-osm
 
-# 2. Compilar TypeScript
+# 2. Instalar dependencias de desarrollo y compilar TypeScript
+npm install
 npm run build
 
-# 3. Registrar enlace global de npm
+# 3. (Opcional) Ejecutar las pruebas del wrapper
+npm test
+
+# 4. Registrar enlace global de npm
 npm link
 ```
+
+> [!TIP]
+> Para instalarlo como archivo en lugar de con `npm link`, genera el paquete con `npm pack` (crea `ruta-craft-osm-<versión>.tgz`) y en la app usa `"ruta-craft-osm": "file:ruta/al/ruta-craft-osm-<versión>.tgz"` en `package.json`. Vuelve a generarlo cada vez que cambie el motor o el wrapper.
 
 ### Paso 2: Usar en tu proyecto de Electron / Node.js
 ```powershell
@@ -131,6 +141,8 @@ npm link ruta-craft-osm
 
 ### Paso 3: Ejemplo de código en JavaScript / TypeScript
 ```javascript
+const os = require('os');
+const path = require('path');
 const { calcularRuta } = require('ruta-craft-osm');
 
 async function obtenerRutaLecturas() {
@@ -142,7 +154,7 @@ async function obtenerRutaLecturas() {
         [29.059486, -110.053973], // Medidor 3
         [29.118091, -109.970340]  // Destino final
       ],
-      cachePath: './cache_rutas.json',
+      cachePath: path.join(os.tmpdir(), 'cache_rutas.json'), // en Electron, usa app.getPath('userData')
       saveCache: true
     });
 
@@ -187,3 +199,9 @@ console.log(`${resultado.distancia_total_km} km`);
 // Al salir, cerrar el motor para que guarde el caché en disco
 app.on('before-quit', () => motor.cerrar());
 ```
+
+| Método | Descripción |
+| :--- | :--- |
+| `crearMotorRutas(opciones?)` | Crea el motor. El proceso `cli.exe --serve` se inicia en la primera llamada a `calcular()`. |
+| `motor.calcular(puntos)` | Devuelve una `Promise<ResultadoRuta>`. Acepta llamadas en paralelo; cada una se rechaza si supera `timeoutMs` o si el tramo no tiene ruta. |
+| `motor.cerrar()` | Cierra el proceso y guarda el caché en `cachePath` (si `saveCache` no es `false`). Si el proceso termina inesperadamente, la siguiente llamada lo reinicia. |

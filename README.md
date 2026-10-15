@@ -11,7 +11,7 @@
 * 🌲 **Snapping $O(\log N)$ con KD-Tree**: Búsqueda del nodo más cercano instantánea sin evaluar linealmente todo el grafo.
 * 📦 **Formato Binario `RCO1`**: Carga un grafo de 25 mil nodos en **~35 ms** y uno urbano de 75 mil (Hermosillo) en **~120 ms**.
 * 🧾 **Instrucciones Tipo GPS (*Turn-by-turn*)**: Maniobras de giro (*"Sigue recto"*, *"Gira a la derecha"*), nombres de calles y consolidación de tramos.
-* 🔌 **Integración Transparente con Electron**: Detección automática en entornos de producción empaquetados (`app.asar.unpacked`).
+* 🔌 **Integración Transparente con Electron**: Motor persistente (`crearMotorRutas()`) y detección automática en entornos de producción empaquetados (`app.asar.unpacked`).
 * 🐍 **Gestión Moderna con `uv`**: Extracción y preparación de datos geográficos reproducible y rápida.
 
 ---
@@ -22,7 +22,7 @@
 RutaCraftOSM/
 ├── docs/                       # 📚 Documentación técnica detallada
 │   ├── README.md               # Índice general de documentación
-│   ├── 1_ARQUITECTURA_Y_MIGRACION.md # Arquitectura y benchmarks Python vs C++
+│   ├── 1_ARQUITECTURA_Y_MIGRACION.md # Arquitectura y validación de la migración a C++
 │   ├── 2_IMPLEMENTACION_PYTHON_UV.md # Pipeline de datos con uv y OSMnx
 │   ├── 3_MOTOR_CPP_RUTACRAFT.md      # Motor nativo C++, KD-Tree y A*
 │   ├── 4_INTEGRACION_TYPESCRIPT_ELECTRON.md # Wrapper npm y Electron
@@ -32,6 +32,7 @@ RutaCraftOSM/
 │   ├── include/                # Cabeceras (kdtree, astar, grafo, cache, etc.)
 │   ├── src/main.cpp            # CLI principal
 │   ├── bin/cli.exe             # Binario estático compilado (generado, no versionado)
+│   ├── bench/                  # Benchmark por fases (genera docs/5_RENDIMIENTO.md)
 │   ├── tests/                  # Pruebas del CLI C++ y paridad con Python (unittest)
 │   ├── CMakeLists.txt          # Build multiplataforma (MinGW, MSVC, GCC)
 │   └── build.bat               # Atajo con g++ (-O3, -static)
@@ -40,14 +41,16 @@ RutaCraftOSM/
 │   ├── geodatos/               # Polígonos GeoJSON
 │   ├── grafos/                 # Grafos generados (.bin, .json, .pkl)
 │   ├── tests/                  # Pruebas unitarias de Python
-│   └── preparar_grafo.py       # Extractor y exportador de grafos OSM
+│   ├── preparar_grafo.py       # Extractor y exportador de grafos OSM
+│   └── generar_grafos_benchmark.py # Grafo de Hermosillo para el benchmark
 │
 ├── ruta-craft-osm/             # 📦 Paquete npm para Node.js / Electron
 │   ├── bin/cli/                # cli.exe nativo y grafo binario
 │   ├── src/index.ts            # Wrapper TypeScript
 │   └── package.json            # Configuración npm
 │
-└── Libretas/                   # 📓 Jupyter Notebooks de análisis y pruebas
+├── Libretas/                   # 📓 Jupyter Notebooks de análisis y pruebas
+└── .github/workflows/ci.yml    # 🤖 CI: compila y prueba en Windows y Linux
 ```
 
 ---
@@ -97,6 +100,16 @@ console.log(`Distancia: ${respuesta.resultado.distancia_total_km} km`);
 console.log(respuesta.resultado.instrucciones);
 ```
 
+En Electron, para varias rutas seguidas usa el **motor persistente**, que carga el grafo una sola vez (detalles en la [guía de integración](./docs/4_INTEGRACION_TYPESCRIPT_ELECTRON.md)):
+
+```javascript
+const { crearMotorRutas } = require('ruta-craft-osm');
+
+const motor = crearMotorRutas({ cachePath: path.join(app.getPath('userData'), 'cache_rutas.json') });
+const resultado = await motor.calcular([[29.065639, -110.056448], [29.059486, -110.053973]]);
+app.on('before-quit', () => motor.cerrar());
+```
+
 ---
 
 ## 🧪 Pruebas
@@ -114,6 +127,16 @@ npm test
 
 GitHub Actions ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) compila el motor en Windows y Linux, corre las tres suites en cada push a `main` y en cada pull request, y prueba el wrapper con el binario recién compilado.
 
+### Benchmark
+
+```powershell
+cd RutaCraftOSM_c
+cmake --build build --config Release --target cli benchmark
+python bench/correr_benchmark.py
+```
+
+Regenera [`docs/5_RENDIMIENTO.md`](./docs/5_RENDIMIENTO.md), `docs/benchmark.json` y las rutas del [visualizador](./docs/visualizacion_ruta.html). El escenario de Hermosillo necesita antes `uv run python generar_grafos_benchmark.py` (desde `RutaCraftOSM/`).
+
 ---
 
 ## 📖 Documentación Detallada
@@ -124,4 +147,4 @@ Para consultar la guía técnica completa, revisa la carpeta [`docs/`](./docs/RE
 * [⚡ Motor de Ruteo en C++ (`RutaCraftOSM_c`)](./docs/3_MOTOR_CPP_RUTACRAFT.md)
 * [📦 Integración TypeScript y Electron](./docs/4_INTEGRACION_TYPESCRIPT_ELECTRON.md)
 * [⏱️ Rendimiento del Motor C++](./docs/5_RENDIMIENTO.md)
-* [🗺️ Visualizador y Comparador Web Interactivo](./docs/visualizacion_ruta.html)
+* [🗺️ Visualizador de Rutas del Benchmark](./docs/visualizacion_ruta.html)

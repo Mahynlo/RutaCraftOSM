@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador y Comparador de Rutas - RutaCraftOSM</title>
+    <title>Visualizador de Rutas - RutaCraftOSM</title>
     
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -46,7 +46,7 @@
                 <div class="brand-title">
                     <i class="fa-solid fa-route" style="color: var(--cpp);"></i>
                     RutaCraftOSM
-                    <span class="brand-badge">C++ vs Python</span>
+                    <span class="brand-badge">C++20</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <button class="btn-theme-toggle" aria-label="Cambiar Tema" style="padding: 4px 8px; font-size: 0.75rem;"></button>
@@ -56,20 +56,22 @@
                     </a>
                 </div>
             </div>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
-                Visualizador y Comparador de Rutas OSM
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;" id="bench-meta">
+                Rutas de los escenarios del benchmark
             </p>
+            <label class="scenario-label" for="escenario-select">Escenario</label>
+            <select id="escenario-select" class="scenario-select" onchange="selectEscenario(this.value)"></select>
         </div>
 
         <!-- Mode Selector -->
         <div class="tabs-container">
             <button class="tab-btn active-cpp" id="btn-cpp" onclick="setMode('cpp')">
-                <i class="fa-solid fa-bolt"></i>
-                Motor C++
+                <i class="fa-solid fa-arrows-left-right"></i>
+                Ignora sentidos
             </button>
             <button class="tab-btn" id="btn-py" onclick="setMode('py')">
-                <i class="fa-brands fa-python"></i>
-                Motor Python
+                <i class="fa-solid fa-arrow-right-long"></i>
+                Respeta sentidos
             </button>
             <button class="tab-btn" id="btn-compare" onclick="setMode('compare')">
                 <i class="fa-solid fa-code-compare"></i>
@@ -80,46 +82,46 @@
         <!-- Metrics Grid -->
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="metric-label"><i class="fa-solid fa-stopwatch"></i> Tiempo Cálculo</div>
-                <div class="metric-value" id="val-time" style="color: var(--cpp);">56.7 ms</div>
-                <div class="metric-sub" id="val-time-sub">⚡ 16.0x más veloz</div>
+                <div class="metric-label"><i class="fa-solid fa-stopwatch"></i> Tiempo por ruta</div>
+                <div class="metric-value" id="val-time" style="color: var(--cpp);">–</div>
+                <div class="metric-sub" id="val-time-sub">Motor persistente</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label"><i class="fa-solid fa-road"></i> Distancia Total</div>
-                <div class="metric-value" id="val-dist">14.68 km</div>
-                <div class="metric-sub" id="val-dist-sub">Exactitud: 100.00%</div>
+                <div class="metric-value" id="val-dist">–</div>
+                <div class="metric-sub" id="val-dist-sub"></div>
             </div>
             <div class="metric-card">
                 <div class="metric-label"><i class="fa-solid fa-draw-polygon"></i> Puntos Polilínea</div>
-                <div class="metric-value" id="val-points">458 pts</div>
-                <div class="metric-sub">0.00m desviación</div>
+                <div class="metric-value" id="val-points">–</div>
+                <div class="metric-sub" id="val-points-sub"></div>
             </div>
             <div class="metric-card">
                 <div class="metric-label"><i class="fa-solid fa-location-dot"></i> Paradas GPS</div>
-                <div class="metric-value" id="val-stops">23 paradas</div>
+                <div class="metric-value" id="val-stops">–</div>
                 <div class="metric-sub">Snapping KD-Tree</div>
             </div>
         </div>
 
-        <!-- Benchmark Speedup Bar -->
+        <!-- Comparación de distancia entre variantes -->
         <div class="benchmark-box">
-            <div class="speedup-badge">
-                <i class="fa-solid fa-gauge-high"></i> Aceleración de C++: 16.0x vs Python
+            <div class="speedup-badge" id="diff-badge">
+                <i class="fa-solid fa-scale-balanced"></i> <span id="diff-text"></span>
             </div>
             <div class="bar-container">
                 <div class="bar-row">
-                    <span class="bar-label" style="color: var(--cpp);">C++20</span>
+                    <span class="bar-label" style="color: var(--cpp);">Ignora</span>
                     <div class="progress-bar-bg">
-                        <div class="progress-bar-fill fill-cpp"></div>
+                        <div class="progress-bar-fill fill-cpp" id="bar-normal"></div>
                     </div>
-                    <span style="font-weight: 700; color: var(--cpp);">56 ms</span>
+                    <span class="bar-value" style="color: var(--cpp);" id="bar-normal-val">–</span>
                 </div>
-                <div class="bar-row">
-                    <span class="bar-label" style="color: var(--python);">Python</span>
+                <div class="bar-row" id="bar-row-dirigido">
+                    <span class="bar-label" style="color: var(--python);">Respeta</span>
                     <div class="progress-bar-bg">
-                        <div class="progress-bar-fill fill-py"></div>
+                        <div class="progress-bar-fill fill-py" id="bar-dirigido"></div>
                     </div>
-                    <span style="font-weight: 700; color: var(--python);">910 ms</span>
+                    <span class="bar-value" style="color: var(--python);" id="bar-dirigido-val">–</span>
                 </div>
             </div>
         </div>
@@ -128,7 +130,7 @@
         <div class="instructions-panel">
             <div class="section-title">
                 <span><i class="fa-solid fa-diamond-turn-right"></i> Instrucciones de Navegación</span>
-                <span id="inst-count" style="font-size: 0.75rem; color: var(--cpp);">48 pasos</span>
+                <span id="inst-count" style="font-size: 0.75rem; color: var(--cpp);"></span>
             </div>
             <div id="instructions-list">
                 <!-- Generado dinámicamente con JavaScript -->
@@ -154,11 +156,11 @@
         <div class="map-legend">
             <div class="legend-item">
                 <div class="legend-color" style="background: var(--cpp); height: 5px;"></div>
-                <span>Ruta C++ (Nativa)</span>
+                <span>Ignorando sentidos</span>
             </div>
             <div class="legend-item" id="legend-py-item" style="display: none;">
-                <div class="legend-color" style="background: var(--python); height: 4px; border: 1px dashed white;"></div>
-                <span>Ruta Python (Referencia)</span>
+                <div class="legend-color" style="background: var(--python); height: 4px;"></div>
+                <span>Respetando sentidos</span>
             </div>
             <div class="legend-item">
                 <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></div>
@@ -184,7 +186,7 @@
     </nav>
 
     <!-- Modular Scripts -->
-    <script src="js/datos_ejemplo.js"></script>
+    <script src="js/rutas_benchmark.js"></script>
     <script src="js/visualizador.js"></script>
 </body>
 </html>

@@ -41,9 +41,9 @@ La versión original en Python (empaquetada con Nuitka) presentaba cuellos de bo
 
 ---
 
-## 3. Benchmarks y Resultados Reales de la Migración
+## 3. Validación de la Migración
 
-Se ejecutó una prueba de validación comparativa automatizada ([`comparar_motores.py`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_craft/RutaCraftOSM/RutaCraftOSM/tests/comparar_motores.py)) sobre **23 paradas GPS distribuidas a lo largo de los municipios de Mazatán y Villa Pesqueira**:
+Para confirmar que el motor C++ reemplaza al de Python sin cambiar los resultados, se ejecutó la comparación automatizada [`comparar_motores.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/tests/comparar_motores.py) sobre **23 paradas GPS distribuidas a lo largo de los municipios de Mazatán y Villa Pesqueira**. La misma verificación (ruta y distancia idénticas) corre en cada push como parte de las pruebas del motor (`TestParidadPython` en `RutaCraftOSM_c/tests/test_cpp_cli.py`).
 
 ```text
 ============================================================
@@ -51,12 +51,12 @@ Se ejecutó una prueba de validación comparativa automatizada ([`comparar_motor
 ============================================================
 
 ⏱️ TIEMPOS DE EJECUCIÓN (23 puntos GPS en todo el municipio):
-  • Python:  910.12 ms
-  • C++:     56.76 ms  (⚡ 16.0x más rápido)
+  • Python:  1076.76 ms
+  • C++:     56.44 ms  (19.1x más rápido)
 
 📏 DISTANCIA TOTAL CALCULADA:
-  • Python:  14680.6 m  (14.68 km)
-  • C++:     14680.6 m  (14.68 km)
+  • Python:  14706.4 m  (14.71 km)
+  • C++:     14706.4 m  (14.71 km)
 
 📍 PUNTOS EN LA POLILÍNEA DE LA RUTA:
   • Python:  458 coordenadas generadas
@@ -67,19 +67,21 @@ Se ejecutó una prueba de validación comparativa automatizada ([`comparar_motor
   • C++:     48 pasos
 
 ============================================================
-Diferencia en distancia: 0.00 metros (0.000% de error)
+Diferencia en distancia: 0.00 metros (0.000%)
 ✅ VERIFICACIÓN EXITOSA: Ambos motores producen resultados equivalentes.
 ============================================================
 ```
 
+C++ genera más instrucciones (48 contra 44) porque, a diferencia del motor Python, lee los nombres de calle del grafo y separa los tramos cuando cambia la calle.
+
 > [!TIP]
-> Puedes abrir el **[Visualizador Interactivo y Comparador Web](./visualizacion_ruta.html)** directamente en tu navegador para ver la superposición visual de ambas rutas y comprobar que coinciden al 100% calle por calle.
+> El rendimiento actual del motor C++ (carga del grafo, motor persistente, ciudad de Hermosillo) está en **[5. Rendimiento del Motor C++](./5_RENDIMIENTO.md)**, y las rutas de esos escenarios se pueden ver en el **[Visualizador Web](./visualizacion_ruta.html)**.
 
 ---
 
 ## 4. Equivalencia Funcional 1:1
 
-El motor en C++ reproduce exactamente todas las entradas, salidas y comportamientos del CLI original:
+El motor en C++ reproduce las entradas, salidas y comportamientos del CLI original (referencia completa de opciones en [3. Motor C++](./3_MOTOR_CPP_RUTACRAFT.md#7-uso-de-la-cli)):
 
 * **Formatos de entrada**: `--array lat1 lon1 lat2 lon2...`, `--puntos archivo.json`, `--puntos "[[lat, lon], ...]"` (incluso con longitudes negativas).
 * **Gestión de grafos**: `--grafo <ruta>` (búsqueda automática en `grafos/` y soporte para binario `.bin` y `.json`).

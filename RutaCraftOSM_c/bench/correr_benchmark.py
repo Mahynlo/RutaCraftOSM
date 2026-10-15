@@ -1,6 +1,7 @@
 """
 Corre el benchmark del motor sobre los grafos disponibles (zona Mazatán y ciudad de Hermosillo)
-y guarda los resultados en docs/benchmark.json y docs/5_RENDIMIENTO.md.
+y guarda los resultados en docs/benchmark.json, docs/5_RENDIMIENTO.md y docs/js/rutas_benchmark.js
+(las rutas completas, para verlas en docs/visualizacion_ruta.html).
 
     cmake --build build --target cli benchmark
     python bench/correr_benchmark.py
@@ -30,6 +31,7 @@ BENCHMARK = os.path.join(CPP_DIR, "bin", "benchmark" + EXE)
 CLI = os.path.join(CPP_DIR, "bin", "cli" + EXE)
 SALIDA = os.path.join(ROOT_DIR, "docs", "benchmark.json")
 SALIDA_MD = os.path.join(ROOT_DIR, "docs", "5_RENDIMIENTO.md")
+SALIDA_RUTAS = os.path.join(ROOT_DIR, "docs", "js", "rutas_benchmark.js")
 
 
 def puntos_aleatorios(n, lat_min, lat_max, lon_min, lon_max, semilla):
@@ -57,25 +59,32 @@ ESCENARIOS = {
     ],
 }
 
+# (zona, etiqueta, variante, grafo): la variante "dirigido" respeta las calles de un solo sentido
 GRAFOS = [
-    ("mazatan", "Mazatán - Villa Pesqueira", os.path.join(GRAFOS_DIR, "grafo_mazatan_villapesqueira.bin")),
-    ("hermosillo", "Ciudad de Hermosillo", os.path.join(GRAFOS_DIR, "benchmark", "grafo_hermosillo.bin")),
-    ("hermosillo", "Ciudad de Hermosillo (respetando sentidos)",
+    ("mazatan", "Mazatán - Villa Pesqueira", "normal",
+     os.path.join(GRAFOS_DIR, "grafo_mazatan_villapesqueira.bin")),
+    ("hermosillo", "Ciudad de Hermosillo", "normal",
+     os.path.join(GRAFOS_DIR, "benchmark", "grafo_hermosillo.bin")),
+    ("hermosillo", "Ciudad de Hermosillo (respetando sentidos)", "dirigido",
      os.path.join(GRAFOS_DIR, "benchmark", "grafo_hermosillo_dirigido.bin")),
 ]
+ZONAS = {"mazatan": "Mazatán - Villa Pesqueira", "hermosillo": "Ciudad de Hermosillo"}
 
 
-def tiempo_proceso_cli(grafo, puntos, repeticiones=5):
-    """Tiempo real de una llamada de calcularRuta(): arrancar cli.exe, cargar el grafo y calcular."""
+def ejecutar_cli(grafo, puntos, repeticiones=5):
+    """Mide una llamada de calcularRuta() (arrancar cli.exe, cargar el grafo y calcular) y devuelve
+    (mediana en ms, resultado de la ruta)."""
     tiempos = []
+    resultado = None
     for _ in range(repeticiones):
         t0 = time.perf_counter()
         r = subprocess.run([CLI, "--grafo", grafo, "--puntos", json.dumps(puntos), "--sin-cache"],
-                           capture_output=True)
+                           capture_output=True, text=True, encoding="utf-8")
         tiempos.append((time.perf_counter() - t0) * 1000)
         if r.returncode != 0:
-            return None
-    return round(statistics.median(tiempos), 1)
+            return None, None
+        resultado = json.loads(r.stdout)
+    return round(statistics.median(tiempos), 1), resultado
 
 
 def nombre_cpu():
@@ -95,7 +104,8 @@ def main():
             sys.exit(f"Falta {exe}. Compila con: cmake --build build --target cli benchmark")
 
     resultados = []
-    for clave, etiqueta, grafo in GRAFOS:
+    rutas = {}  # (zona, índice de escenario) -> datos para el visualizador
+    for clave, etiqueta, variante, grafo in GRAFOS:
         if not os.path.exists(grafo):
             print(f"⏭️  {etiqueta}: no existe {os.path.relpath(grafo, ROOT_DIR)}, se omite")
             continue
@@ -113,9 +123,27 @@ def main():
 
         datos = json.loads(r.stdout)
         datos["etiqueta"] = etiqueta
-        for esc, definicion in zip(datos["escenarios"], ESCENARIOS[clave]):
-            if "error" not in esc:
-                esc["proceso_cli_ms"] = tiempo_proceso_cli(grafo, definicion["puntos"])
+        for idx, (esc, definicion) in enumerate(zip(datos["escenarios"], ESCENARIOS[clave])):
+            if "error" in esc:
+                continue
+            esc["proceso_cli_ms"], ruta = ejecutar_cli(grafo, definicion["puntos"])
+            if not ruta:
+                continue
+            entrada = rutas.setdefault((clave, idx), {
+                "id": f"{clave}-{idx}",
+                "zona": ZONAS[clave],
+                "nombre": definicion["nombre"],
+                "puntos": definicion["puntos"],
+                "variantes": {},
+            })
+            entrada["variantes"][variante] = {
+                "distancia_km": ruta["distancia_total_km"],
+                "motor_persistente_ms": esc["total_ms"],
+                "calcular_ruta_ms": esc["proceso_cli_ms"],
+                "ruta": [[round(lat, 6), round(lon, 6)] for lat, lon in ruta["ruta"]],
+                "instrucciones": [{"accion": i["accion"], "calle": i["calle"], "distancia_m": i["distancia_m"]}
+                                  for i in ruta["instrucciones"]],
+            }
         resultados.append(datos)
         imprimir(datos)
 
@@ -128,7 +156,14 @@ def main():
         json.dump({**meta, "grafos": resultados}, f, indent=2, ensure_ascii=False)
     with open(SALIDA_MD, "w", encoding="utf-8") as f:
         f.write(generar_markdown(meta, resultados))
-    print(f"\n💾 Resultados guardados en {os.path.relpath(SALIDA, ROOT_DIR)} y {os.path.relpath(SALIDA_MD, ROOT_DIR)}")
+    with open(SALIDA_RUTAS, "w", encoding="utf-8") as f:
+        f.write("// Generado por RutaCraftOSM_c/bench/correr_benchmark.py; no editar a mano.\n")
+        f.write("const RUTAS_BENCHMARK = ")
+        json.dump({**meta, "escenarios": list(rutas.values())}, f, ensure_ascii=False, separators=(",", ":"))
+        f.write(";\n")
+    print()
+    for salida in (SALIDA, SALIDA_MD, SALIDA_RUTAS):
+        print(f"💾 {os.path.relpath(salida, ROOT_DIR)}")
 
 
 def imprimir(d):

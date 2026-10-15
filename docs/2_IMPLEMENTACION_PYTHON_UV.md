@@ -27,7 +27,7 @@ uv run python -m unittest discover -s tests -p "test_*.py"
 
 ## 2. Funcionamiento de `preparar_grafo.py`
 
-El script [`preparar_grafo.py`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_craft/RutaCraftOSM/RutaCraftOSM/preparar_grafo.py) automatiza la extracción de las redes viales desde OpenStreetMap:
+El script [`preparar_grafo.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/preparar_grafo.py) automatiza la extracción de las redes viales desde OpenStreetMap:
 
 ```mermaid
 flowchart TD
@@ -57,12 +57,41 @@ Al ejecutarse, `preparar_grafo.py` genera tres archivos en la carpeta `grafos/`:
 | Archivo | Formato | Propósito | Tiempo de Carga |
 | :--- | :--- | :--- | :---: |
 | `grafo_mazatan_villapesqueira.bin` | **Binario RCO1** | Consumo directo por el motor C++ | **~35 ms** |
-| `grafo_mazatan_villapesqueira.json` | **JSON** | Inspección humana, debugging y frontend | ~80 ms |
-| `grafo_mazatan_villapesqueira.pkl` | **Pickle** | Compatibilidad con scripts y tests de Python | ~120 ms |
+| `grafo_mazatan_villapesqueira.json` | **JSON** | Inspección humana y debugging (el motor C++ también lo acepta) | ~440 ms |
+| `grafo_mazatan_villapesqueira.pkl` | **Pickle** | Motor Python de referencia y prueba de paridad | ~80 ms |
+
+> [!TIP]
+> Usa siempre el `.bin` en producción: el motor C++ carga el JSON unas 13 veces más lento.
 
 ---
 
-## 4. Pruebas Unitarias de Python
+## 4. Calles de un Solo Sentido
+
+`exportar_grafo_binario(G, salida_bin, respetar_sentido=False)` controla cómo se exportan las aristas:
+
+| `respetar_sentido` | Comportamiento | Uso |
+| :--- | :--- | :--- |
+| `False` (por defecto) | Cada arista se agrega también en sentido contrario: el motor **ignora** las calles de un solo sentido. | Grafo de producción actual (`grafo_mazatan_villapesqueira.bin`). |
+| `True` | Solo las aristas que trae OSMnx, que ya incluye ambos sentidos en las calles de doble sentido. | Rutas que respetan los sentidos; archivo ~40% más chico y carga más rápida. |
+
+En Hermosillo, el 17.7% de las aristas son de un solo sentido y respetarlas alarga las rutas entre 1% y 12%. Ver la comparación completa en [5. Rendimiento](./5_RENDIMIENTO.md#4-calles-de-un-solo-sentido).
+
+---
+
+## 5. Grafo de Hermosillo para el Benchmark
+
+[`generar_grafos_benchmark.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/generar_grafos_benchmark.py) descarga la zona urbana de Hermosillo (~75 mil nodos) para medir el motor en una ciudad con muchas calles. Genera las dos variantes en `grafos/benchmark/`, carpeta ignorada por git:
+
+```powershell
+cd RutaCraftOSM
+uv run python generar_grafos_benchmark.py
+# grafos/benchmark/grafo_hermosillo.bin           (ignora sentidos)
+# grafos/benchmark/grafo_hermosillo_dirigido.bin  (respeta sentidos)
+```
+
+---
+
+## 6. Pruebas Unitarias de Python
 
 Para verificar que el pipeline de Python funciona correctamente, se dispone de una suite de pruebas en `RutaCraftOSM/tests/`:
 
@@ -70,5 +99,5 @@ Para verificar que el pipeline de Python funciona correctamente, se dispone de u
 uv run python -m unittest discover -s tests -p "test_*.py"
 ```
 
-* [`test_cli.py`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_craft/RutaCraftOSM/RutaCraftOSM/tests/test_cli.py): Prueba entradas por `--array`, `--puntos` (archivo y JSON string) y exportación a `--salida`.
-* [`test_cli_errores.py`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_craft/RutaCraftOSM/RutaCraftOSM/tests/test_cli_errores.py): Prueba manejo de errores (JSON malformado, número impar de coordenadas, falta de argumentos).
+* [`test_cli.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/tests/test_cli.py): Prueba entradas por `--array`, `--puntos` (archivo y JSON string) y exportación a `--salida`.
+* [`test_cli_errores.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/tests/test_cli_errores.py): Prueba manejo de errores (JSON malformado, número impar de coordenadas, falta de argumentos).

@@ -17,9 +17,9 @@ Lo que se paga cada vez que se inicia `cli.exe`: una vez por llamada con `calcul
 
 | Grafo | Nodos | Aristas | Archivo | Carga del grafo | KD-Tree | Memoria pico |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Mazatán - Villa Pesqueira | 24,465 | 98,846 | 4.1 MB | 40.9 ms | 4.1 ms | 15.7 MB |
-| Ciudad de Hermosillo | 74,839 | 301,916 | 13.5 MB | 120.6 ms | 15.5 ms | 46.7 MB |
-| Ciudad de Hermosillo (respetando sentidos) | 74,839 | 150,958 | 7.8 MB | 59.1 ms | 13.5 ms | 34.4 MB |
+| Mazatán - Villa Pesqueira | 24,465 | 98,846 | 4.1 MB | 31.9 ms | 3.8 ms | 15.7 MB |
+| Ciudad de Hermosillo | 74,839 | 301,916 | 13.5 MB | 118.1 ms | 15.2 ms | 46.7 MB |
+| Ciudad de Hermosillo (respetando sentidos) | 74,839 | 150,958 | 7.8 MB | 122.5 ms | 21.1 ms | 34.2 MB |
 
 ---
 
@@ -35,26 +35,26 @@ Las paradas de los escenarios de 25 y 50 puntos en Hermosillo se generan al azar
 
 | Escenario | Paradas | Distancia | Motor persistente | calcularRuta() | A\* |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| Ruta corta (3 paradas) | 3 | 0.57 km | **0.096 ms** | 53.4 ms | 0.014 ms |
-| Ruta municipal (23 paradas) | 23 | 14.71 km | **1.446 ms** | 58.7 ms | 0.79 ms |
+| Ruta corta (3 paradas) | 3 | 0.57 km | **0.075 ms** | 53.0 ms | 0.014 ms |
+| Ruta municipal (23 paradas) | 23 | 14.71 km | **0.778 ms** | 55.6 ms | 0.237 ms |
 
 ### Ciudad de Hermosillo
 
 | Escenario | Paradas | Distancia | Motor persistente | calcularRuta() | A\* |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| Cruce norte-sur (2 puntos) | 2 | 14.9 km | **5.174 ms** | 147.4 ms | 4.65 ms |
-| Centro al aeropuerto (2 puntos) | 2 | 10.47 km | **2.943 ms** | 148.1 ms | 2.435 ms |
-| Ruta de lectura en una colonia (25 paradas) | 25 | 32.02 km | **2.912 ms** | 155.0 ms | 1.071 ms |
-| Recorrido por toda la ciudad (50 paradas) | 50 | 441.34 km | **102.853 ms** | 249.6 ms | 91.774 ms |
+| Cruce norte-sur (2 puntos) | 2 | 14.9 km | **5.383 ms** | 168.8 ms | 4.834 ms |
+| Centro al aeropuerto (2 puntos) | 2 | 10.47 km | **2.901 ms** | 176.8 ms | 2.508 ms |
+| Ruta de lectura en una colonia (25 paradas) | 25 | 32.02 km | **3.271 ms** | 170.3 ms | 1.085 ms |
+| Recorrido por toda la ciudad (50 paradas) | 50 | 441.34 km | **108.827 ms** | 272.7 ms | 93.351 ms |
 
 ### Ciudad de Hermosillo (respetando sentidos)
 
 | Escenario | Paradas | Distancia | Motor persistente | calcularRuta() | A\* |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| Cruce norte-sur (2 puntos) | 2 | 15.03 km | **4.063 ms** | 103.3 ms | 3.395 ms |
-| Centro al aeropuerto (2 puntos) | 2 | 11.04 km | **2.062 ms** | 114.7 ms | 0.995 ms |
-| Ruta de lectura en una colonia (25 paradas) | 25 | 35.9 km | **2.688 ms** | 123.5 ms | 0.975 ms |
-| Recorrido por toda la ciudad (50 paradas) | 50 | 459.4 km | **93.961 ms** | 259.7 ms | 75.29 ms |
+| Cruce norte-sur (2 puntos) | 2 | 15.03 km | **6.815 ms** | 130.1 ms | 6.821 ms |
+| Centro al aeropuerto (2 puntos) | 2 | 11.04 km | **3.019 ms** | 118.6 ms | 2.924 ms |
+| Ruta de lectura en una colonia (25 paradas) | 25 | 35.9 km | **5.418 ms** | 118.2 ms | 2.318 ms |
+| Recorrido por toda la ciudad (50 paradas) | 50 | 459.4 km | **115.376 ms** | 225.2 ms | 106.946 ms |
 
 ---
 
@@ -90,7 +90,7 @@ Sigue recto en Boulevard Lázaro Cárdenas (459 m)
 
 El grafo de producción agrega cada arista también en sentido contrario, por lo que el motor puede trazar rutas en contrasentido. Comparación en Hermosillo con un grafo que respeta los sentidos (`exportar_grafo_binario(..., respetar_sentido=True)`):
 
-* Archivo: 13.5 MB → 7.8 MB; carga: 120.6 ms → 59.1 ms; aristas: 301,916 → 150,958.
+* Archivo: 13.5 MB → 7.8 MB; carga: 118.1 ms → 122.5 ms; aristas: 301,916 → 150,958.
 
 | Escenario | Ignorando sentidos | Respetando sentidos | Diferencia |
 | :--- | ---: | ---: | ---: |
