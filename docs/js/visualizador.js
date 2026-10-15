@@ -44,6 +44,14 @@ function initMap() {
 
     markersGroup = L.layerGroup().addTo(map);
 
+    // Si el usuario mueve el mapa durante el recorrido, deja de seguir al vehículo
+    map.on('dragstart', () => {
+        if (!simulacion.activa) return;
+        simulacion.seguir = false;
+        const check = document.getElementById('sim-follow');
+        if (check) check.checked = false;
+    });
+
     if (ESCENARIOS.length === 0) {
         setText('bench-meta', 'No hay rutas: ejecuta RutaCraftOSM_c/bench/correr_benchmark.py para generarlas.');
         return;
@@ -82,6 +90,7 @@ function renderSelector() {
 function selectEscenario(id) {
     escenario = ESCENARIOS.find(e => e.id === id);
     if (!escenario) return;
+    detenerSimulacion();
 
     const select = document.getElementById('escenario-select');
     if (select) select.value = id;
@@ -168,6 +177,9 @@ function renderInstructions() {
 
         const card = document.createElement('div');
         card.className = 'instruction-item';
+        card.dataset.index = i;
+        card.title = 'Llevar el recorrido a este paso';
+        card.addEventListener('click', () => irAInstruccion(i));
         card.innerHTML = `
             <div class="inst-icon"><i class="fa-solid ${iconClass}"></i></div>
             <div class="inst-details">
@@ -294,6 +306,7 @@ function setMode(mode, ajustarVista = false) {
     if (!escenario) return;
     if (mode !== 'cpp' && !escenario.variantes.dirigido) mode = 'cpp';
     currentMode = mode;
+    detenerSimulacion();
 
     const btnCpp = document.getElementById('btn-cpp');
     const btnPy = document.getElementById('btn-py');
@@ -321,6 +334,310 @@ function centerRoute() {
     if (map && polylineLayer) {
         map.fitBounds(polylineLayer.getBounds(), { padding: [50, 50] });
     }
+}
+
+// ============================================================
+// Simulación del recorrido: un vehículo avanza por la ruta y
+// muestra la próxima maniobra como un navegador GPS.
+// ============================================================
+
+const VELOCIDAD_BASE_MS = 40 / 3.6;   // 40 km/h, multiplicada por el factor elegido
+const DISTANCIA_INMINENTE_M = 40;     // a partir de aquí el aviso se resalta
+
+const simulacion = {
+    activa: false,        // hay un recorrido preparado (aunque esté en pausa)
+    corriendo: false,
+    factor: 30,
+    seguir: true,
+    ruta: [],
+    acumulada: [],        // distancia acumulada hasta cada vértice de la ruta
+    total: 0,
+    inicios: [],          // distancia donde empieza cada instrucción
+    instrucciones: [],
+    recorrido: 0,         // metros avanzados
+    segmento: 0,
+    instActual: -1,
+    ultimoFrame: null,
+    marcador: null,
+    trazo: null,
+    raf: null,
+};
+
+function distanciaM(a, b) {
+    const R = 6371000;
+    const rad = Math.PI / 180;
+    const dLat = (b[0] - a[0]) * rad;
+    const dLon = (b[1] - a[1]) * rad;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function rumbo(a, b) {
+    const dx = (b[1] - a[1]) * Math.cos(a[0] * Math.PI / 180);
+    const dy = b[0] - a[0];
+    return Math.atan2(dx, dy) * 180 / Math.PI;
+}
+
+function formatoDistancia(m) {
+    if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
+    if (m >= 100) return `${Math.round(m / 10) * 10} m`;
+    return `${Math.max(0, Math.round(m))} m`;
+}
+
+function iconoAccion(accion) {
+    if (accion.includes('derecha')) return 'fa-arrow-right';
+    if (accion.includes('izquierda')) return 'fa-arrow-left';
+    return 'fa-arrow-up';
+}
+
+function nombreCalle(calle) {
+    return calle === 'desconocida' ? 'calle sin nombre' : calle;
+}
+
+// Prepara la ruta de la variante visible: distancias acumuladas e inicio de cada instrucción
+function prepararSimulacion() {
+    const v = varianteActiva();
+    simulacion.ruta = v.ruta;
+    simulacion.instrucciones = v.instrucciones;
+
+    simulacion.acumulada = [0];
+    for (let i = 1; i < v.ruta.length; i++) {
+        simulacion.acumulada.push(simulacion.acumulada[i - 1] + distanciaM(v.ruta[i - 1], v.ruta[i]));
+    }
+    simulacion.total = simulacion.acumulada[simulacion.acumulada.length - 1] || 0;
+
+    // Las instrucciones son tramos consecutivos de la ruta: su inicio es la suma de las anteriores.
+    // Se escala a la longitud real de la polilínea para absorber el redondeo de cada distancia_m.
+    const sumaInst = v.instrucciones.reduce((s, i) => s + i.distancia_m, 0) || 1;
+    const escala = simulacion.total / sumaInst;
+    let acumulado = 0;
+    simulacion.inicios = v.instrucciones.map(i => {
+        const inicio = acumulado;
+        acumulado += i.distancia_m * escala;
+        return inicio;
+    });
+
+    simulacion.recorrido = 0;
+    simulacion.segmento = 0;
+    simulacion.instActual = -1;
+
+    if (!simulacion.trazo) {
+        simulacion.trazo = L.polyline([], { color: '#0f172a', weight: 6, opacity: 0.55, lineJoin: 'round' });
+    }
+    simulacion.trazo.setLatLngs([]).addTo(map);
+
+    if (!simulacion.marcador) {
+        simulacion.marcador = L.marker(v.ruta[0], {
+            icon: L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div class="vehicle-icon"><i class="fa-solid fa-location-arrow"></i></div>',
+                iconSize: [34, 34],
+                iconAnchor: [17, 17]
+            }),
+            zIndexOffset: 1000,
+            interactive: false
+        });
+    }
+    simulacion.marcador.setLatLng(v.ruta[0]).addTo(map);
+
+    simulacion.activa = true;
+    document.getElementById('nav-banner').hidden = false;
+    document.getElementById('sim-reset').disabled = false;
+}
+
+function toggleSimulacion() {
+    if (!escenario) return;
+    if (!simulacion.activa || simulacion.recorrido >= simulacion.total) {
+        prepararSimulacion();
+        if (simulacion.seguir) map.setView(simulacion.ruta[0], Math.max(map.getZoom(), 16));
+        actualizarSimulacion();
+    }
+    simulacion.corriendo ? pausarSimulacion() : reanudarSimulacion();
+}
+
+function reanudarSimulacion() {
+    simulacion.corriendo = true;
+    simulacion.ultimoFrame = null;
+    simulacion.raf = requestAnimationFrame(pasoSimulacion);
+    actualizarBotonPlay();
+}
+
+function pausarSimulacion() {
+    simulacion.corriendo = false;
+    if (simulacion.raf) cancelAnimationFrame(simulacion.raf);
+    simulacion.raf = null;
+    actualizarBotonPlay();
+}
+
+function reiniciarSimulacion() {
+    if (!simulacion.activa) return;
+    const estabaCorriendo = simulacion.corriendo;
+    pausarSimulacion();
+    prepararSimulacion();
+    if (simulacion.seguir) map.setView(simulacion.ruta[0], Math.max(map.getZoom(), 16));
+    actualizarSimulacion();
+    if (estabaCorriendo) reanudarSimulacion();
+}
+
+// Quita el vehículo y el aviso (al cambiar de escenario o de modo)
+function detenerSimulacion() {
+    pausarSimulacion();
+    simulacion.activa = false;
+    if (simulacion.marcador && map) map.removeLayer(simulacion.marcador);
+    if (simulacion.trazo && map) map.removeLayer(simulacion.trazo);
+    const banner = document.getElementById('nav-banner');
+    if (banner) banner.hidden = true;
+    const reset = document.getElementById('sim-reset');
+    if (reset) reset.disabled = true;
+    setText('sim-progress-text', '');
+    const fill = document.getElementById('sim-progress-fill');
+    if (fill) fill.style.width = '0';
+    document.querySelectorAll('.instruction-item.active, .instruction-item.done')
+        .forEach(el => el.classList.remove('active', 'done'));
+    actualizarBotonPlay();
+}
+
+function cambiarVelocidad(valor) {
+    simulacion.factor = Number(valor) || 30;
+}
+
+// Clic en una instrucción: lleva el vehículo al inicio de ese paso
+function irAInstruccion(i) {
+    if (!escenario) return;
+    if (!simulacion.activa) prepararSimulacion();
+    simulacion.recorrido = simulacion.inicios[i] + 0.01;
+    simulacion.segmento = 0;
+    actualizarSimulacion();
+    actualizarBotonPlay();
+    map.setView(simulacion.marcador.getLatLng(), Math.max(map.getZoom(), 17));
+}
+
+function pasoSimulacion(ahora) {
+    if (!simulacion.corriendo) return;
+    // Limitar el salto si la pestaña estuvo en segundo plano
+    const dt = simulacion.ultimoFrame === null ? 0 : Math.min((ahora - simulacion.ultimoFrame) / 1000, 0.25);
+    simulacion.ultimoFrame = ahora;
+    simulacion.recorrido = Math.min(simulacion.total, simulacion.recorrido + VELOCIDAD_BASE_MS * simulacion.factor * dt);
+
+    actualizarSimulacion();
+
+    if (simulacion.recorrido >= simulacion.total) {
+        pausarSimulacion();
+        return;
+    }
+    simulacion.raf = requestAnimationFrame(pasoSimulacion);
+}
+
+// Coloca el vehículo según los metros recorridos y actualiza aviso, lista y progreso
+function actualizarSimulacion() {
+    const s = simulacion;
+    const { ruta, acumulada } = s;
+    if (ruta.length === 0) return;
+
+    // Segmento actual (el recorrido normalmente solo avanza; si retrocede se busca desde el inicio)
+    if (acumulada[s.segmento] > s.recorrido) s.segmento = 0;
+    while (s.segmento < ruta.length - 2 && acumulada[s.segmento + 1] <= s.recorrido) s.segmento++;
+
+    const a = ruta[s.segmento];
+    const b = ruta[Math.min(s.segmento + 1, ruta.length - 1)];
+    const largo = (acumulada[s.segmento + 1] ?? acumulada[s.segmento]) - acumulada[s.segmento];
+    const t = largo > 0 ? Math.min(1, (s.recorrido - acumulada[s.segmento]) / largo) : 1;
+    const pos = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+
+    s.marcador.setLatLng(pos);
+    const flecha = s.marcador.getElement()?.querySelector('.vehicle-icon i');
+    if (flecha && (a[0] !== b[0] || a[1] !== b[1])) {
+        // fa-location-arrow apunta al noreste (45°)
+        flecha.style.transform = `rotate(${rumbo(a, b) - 45}deg)`;
+    }
+    s.trazo.setLatLngs(ruta.slice(0, s.segmento + 1).concat([pos]));
+    if (s.seguir && s.corriendo) map.panTo(pos, { animate: false });
+
+    // Instrucción en curso: la última cuyo inicio ya se pasó
+    let k = 0;
+    while (k + 1 < s.inicios.length && s.inicios[k + 1] <= s.recorrido) k++;
+    if (k !== s.instActual) {
+        s.instActual = k;
+        marcarInstruccion(k);
+    }
+
+    actualizarAviso(k);
+
+    const pct = s.total > 0 ? 100 * s.recorrido / s.total : 0;
+    document.getElementById('sim-progress-fill').style.width = `${pct}%`;
+    setText('sim-progress-text', `${formatoDistancia(s.recorrido)} de ${formatoDistancia(s.total)}`);
+}
+
+function actualizarAviso(k) {
+    const s = simulacion;
+    const banner = document.getElementById('nav-banner');
+    const actual = s.instrucciones[k];
+    const siguiente = s.instrucciones[k + 1];
+    const icono = document.getElementById('nav-banner-icon');
+
+    banner.classList.remove('inminente', 'llegada');
+
+    if (s.recorrido >= s.total) {
+        banner.classList.add('llegada');
+        icono.innerHTML = '<i class="fa-solid fa-flag-checkered"></i>';
+        setText('nav-banner-dist', 'Has llegado');
+        setText('nav-banner-action', 'Destino alcanzado');
+        setText('nav-banner-street', `${formatoDistancia(s.total)} recorridos · ${escenario.puntos.length} paradas`);
+        setText('nav-banner-now', '');
+        return;
+    }
+
+    const ahora = actual ? `Ahora: ${actual.accion.toLowerCase()} por ${nombreCalle(actual.calle)}` : '';
+
+    if (!siguiente) {
+        icono.innerHTML = '<i class="fa-solid fa-location-dot"></i>';
+        setText('nav-banner-dist', formatoDistancia(s.total - s.recorrido));
+        setText('nav-banner-action', 'Llegada al destino');
+        setText('nav-banner-street', actual ? `por ${nombreCalle(actual.calle)}` : '');
+        setText('nav-banner-now', '');
+        return;
+    }
+
+    const falta = s.inicios[k + 1] - s.recorrido;
+    if (falta <= DISTANCIA_INMINENTE_M) banner.classList.add('inminente');
+    icono.innerHTML = `<i class="fa-solid ${iconoAccion(siguiente.accion)}"></i>`;
+    setText('nav-banner-dist', `En ${formatoDistancia(falta)}`);
+    setText('nav-banner-action', siguiente.accion === 'Sigue recto' ? 'Continúa recto' : siguiente.accion);
+    setText('nav-banner-street', `en ${nombreCalle(siguiente.calle)}`);
+    setText('nav-banner-now', ahora);
+}
+
+// Resalta el paso actual en la lista y lo mantiene visible
+function marcarInstruccion(k) {
+    document.querySelectorAll('#instructions-list .instruction-item').forEach(el => {
+        const i = Number(el.dataset.index);
+        el.classList.toggle('active', i === k);
+        el.classList.toggle('done', i < k);
+    });
+    const activo = document.querySelector(`#instructions-list .instruction-item[data-index="${k}"]`);
+    const sidebar = document.getElementById('sidebar');
+    // En móvil el panel está oculto mientras se ve el mapa; no hace falta desplazar
+    if (activo && sidebar && sidebar.offsetParent !== null) {
+        activo.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+}
+
+function actualizarBotonPlay() {
+    const btn = document.getElementById('sim-play');
+    if (!btn) return;
+    let icono = 'fa-play';
+    let texto = 'Iniciar recorrido';
+    if (simulacion.corriendo) {
+        icono = 'fa-pause';
+        texto = 'Pausar';
+    } else if (simulacion.activa && simulacion.recorrido > 0 && simulacion.recorrido < simulacion.total) {
+        texto = 'Continuar';
+    } else if (simulacion.activa && simulacion.recorrido >= simulacion.total) {
+        icono = 'fa-rotate-right';
+        texto = 'Repetir recorrido';
+    }
+    btn.innerHTML = `<i class="fa-solid ${icono}"></i> <span>${texto}</span>`;
+    btn.title = texto;
 }
 
 // Alternar vista móvil (Mapa vs Panel)

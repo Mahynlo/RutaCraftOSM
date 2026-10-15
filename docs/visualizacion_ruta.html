@@ -172,6 +172,44 @@
             </div>
         </div>
 
+        <!-- Aviso de navegación durante la simulación del recorrido -->
+        <div class="nav-banner" id="nav-banner" hidden>
+            <div class="nav-banner-icon" id="nav-banner-icon"><i class="fa-solid fa-arrow-up"></i></div>
+            <div class="nav-banner-body">
+                <div class="nav-banner-dist" id="nav-banner-dist"></div>
+                <div class="nav-banner-action" id="nav-banner-action"></div>
+                <div class="nav-banner-street" id="nav-banner-street"></div>
+                <div class="nav-banner-now" id="nav-banner-now"></div>
+            </div>
+        </div>
+
+        <!-- Controles de la simulación del recorrido -->
+        <div class="sim-player" id="sim-player">
+            <button class="sim-btn sim-btn-main" id="sim-play" onclick="toggleSimulacion()" title="Iniciar recorrido">
+                <i class="fa-solid fa-play"></i> <span>Iniciar recorrido</span>
+            </button>
+            <button class="sim-btn" id="sim-reset" onclick="reiniciarSimulacion()" title="Reiniciar" disabled>
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <label class="sim-speed" title="Velocidad de la simulación (40 km/h × factor)">
+                <i class="fa-solid fa-gauge-high"></i>
+                <select id="sim-speed" onchange="cambiarVelocidad(this.value)">
+                    <option value="10">10x</option>
+                    <option value="30" selected>30x</option>
+                    <option value="100">100x</option>
+                    <option value="300">300x</option>
+                </select>
+            </label>
+            <label class="sim-follow" title="Mover el mapa junto con el vehículo">
+                <input type="checkbox" id="sim-follow" checked onchange="simulacion.seguir = this.checked">
+                <span>Seguir</span>
+            </label>
+            <div class="sim-progress">
+                <div class="sim-progress-bar"><div class="sim-progress-fill" id="sim-progress-fill"></div></div>
+                <span class="sim-progress-text" id="sim-progress-text"></span>
+            </div>
+        </div>
+
         <div id="map"></div>
     </main>
 
