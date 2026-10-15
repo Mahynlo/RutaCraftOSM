@@ -84,4 +84,5 @@ El motor en C++ reproduce exactamente todas las entradas, salidas y comportamien
 * **Formatos de entrada**: `--array lat1 lon1 lat2 lon2...`, `--puntos archivo.json`, `--puntos "[[lat, lon], ...]"` (incluso con longitudes negativas).
 * **Gestión de grafos**: `--grafo <ruta>` (búsqueda automática en `grafos/` y soporte para binario `.bin` y `.json`).
 * **Formatos de salida**: Salida por archivo con `--salida <ruta.json>` y salida por consola con `--stdout`.
-* **Caché**: Carga y guardado de sub-rutas calculadas con soporte para `--no-save-cache`.
+* **Caché**: Carga y guardado de sub-rutas calculadas con soporte para `--no-save-cache`; `--sin-cache` desactiva por completo la lectura y escritura del caché.
+* **Modo servidor** (solo C++): `--serve` carga el grafo una vez y atiende peticiones JSON línea por línea por stdin (`{"id":1,"puntos":[[lat,lon],...]}` → `{"id":1,"ok":true,"resultado":{...}}`). El caché se guarda al cerrarse stdin.

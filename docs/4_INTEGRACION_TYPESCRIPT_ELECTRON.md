@@ -23,35 +23,42 @@ sequenceDiagram
     TS-->>App: Resuelve Promise con RespuestaRutaCompleta
 ```
 
+Además existe un **modo persistente** (`crearMotorRutas()`): se lanza una sola vez `cli.exe --serve`, que mantiene el grafo, el KD-Tree y el caché en memoria, y cada ruta viaja como una línea JSON por stdin/stdout:
+
+```mermaid
+sequenceDiagram
+    participant App as App Electron / React
+    participant TS as MotorRutas (index.ts)
+    participant Cpp as cli.exe --serve
+
+    App->>TS: crearMotorRutas({ cachePath })
+    App->>TS: motor.calcular([...])
+    TS->>Cpp: spawn (solo la primera vez) + {"id":1,"puntos":[...]}
+    Cpp-->>TS: {"id":1,"ok":true,"resultado":{...}} (~0.5ms)
+    TS-->>App: Resuelve Promise con ResultadoRuta
+    App->>TS: motor.cerrar()
+    TS->>Cpp: Cierra stdin → guarda caché y termina
+```
+
+| | `calcularRuta()` | `crearMotorRutas()` |
+| :--- | :--- | :--- |
+| Proceso | Uno nuevo por llamada | Uno persistente |
+| Carga de grafo + KD-Tree | En cada llamada | Una sola vez |
+| Tiempo por ruta (zona Mazatán–Villa Pesqueira) | ~65 ms | ~0.5 ms |
+| Caché en disco | Se lee y guarda en cada llamada | Se lee al iniciar, se guarda en `cerrar()` |
+
 ---
 
 ## 2. Detección Automática de Entorno (Electron vs Node)
 
-En [`src/index.ts`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_craft/RutaCraftOSM/ruta-craft-osm/src/index.ts), la función `getCliExePath()` detecta si la aplicación está empaquetada con Electron en producción (`app.asar`):
+En [`src/index.ts`](file:///C:/Users/ASUS/Documents/Agua_VP_Electron/Ruta_craft/RutaCraftOSM/ruta-craft-osm/src/index.ts), la función `getCliExePath()` resuelve el binario relativo al propio paquete. Si la ruta pasa por `app.asar` (Electron empaquetado en producción), la redirige a `app.asar.unpacked`, porque un ejecutable no puede lanzarse desde dentro del archivo `.asar`:
 
 ```typescript
-function isPackaged(): boolean {
-    return process.mainModule?.filename.includes('app.asar') ?? false;
-}
-
 function getCliExePath(): string {
-    const isWindows = process.platform === "win32";
-    const binaryName = isWindows ? "cli.exe" : "cli";
-
-    if (isPackaged()) {
-        const resourcesPath = (process as any).resourcesPath;
-        return path.join(
-            resourcesPath,
-            "app.asar.unpacked",
-            "node_modules",
-            "ruta-craft-osm",
-            "bin",
-            "cli",
-            binaryName
-        );
-    } else {
-        return path.join(__dirname, "..", "bin", "cli", binaryName);
-    }
+    const binaryName = process.platform === "win32" ? "cli.exe" : "cli";
+    return path
+        .join(__dirname, "..", "bin", "cli", binaryName)
+        .replace(/app\.asar([\\/])/, "app.asar.unpacked$1");
 }
 ```
 
@@ -66,8 +73,16 @@ function getCliExePath(): string {
 export interface CalcularRutaOptions {
     puntos: [number, number][]; // Array de coordenadas [latitud, longitud]
     grafo?: string;             // Ruta al archivo de grafo .bin o .json
-    cachePath?: string;         // Ruta para leer/guardar caché
+    cachePath?: string;         // Archivo de caché a leer/guardar. Sin él no se toca ningún archivo de caché
     saveCache?: boolean;        // Si es false, no guarda el caché en disco
+    timeoutMs?: number;         // Tiempo máximo de ejecución (default: 30000)
+}
+
+export interface MotorRutasOptions {
+    grafo?: string;
+    cachePath?: string;         // Se lee al iniciar y se guarda al llamar cerrar()
+    saveCache?: boolean;        // Si es false, el caché solo vive en memoria
+    timeoutMs?: number;         // Tiempo máximo por petición (default: 30000)
 }
 
 export interface InstruccionNavegacion {
@@ -145,4 +160,30 @@ async function obtenerRutaLecturas() {
     console.error("Error al calcular ruta:", error);
   }
 }
+```
+
+> [!NOTE]
+> Las coordenadas se validan antes de llamar al motor (números finitos, latitud ±90, longitud ±180). Si algún tramo no tiene ruta posible, la promesa se rechaza en lugar de devolver una ruta incompleta.
+
+### Paso 4 (recomendado en Electron): motor persistente
+En el proceso *main* de Electron, crea un único motor y reutilízalo en cada petición IPC. Guarda el caché en `userData`, que siempre tiene permisos de escritura (el directorio de trabajo de una app instalada puede no tenerlos):
+
+```javascript
+const { app } = require('electron');
+const path = require('path');
+const { crearMotorRutas } = require('ruta-craft-osm');
+
+const motor = crearMotorRutas({
+  cachePath: path.join(app.getPath('userData'), 'cache_rutas.json')
+});
+
+// El proceso se inicia solo en la primera llamada y se reinicia si termina inesperadamente
+const resultado = await motor.calcular([
+  [29.065639, -110.056448],
+  [29.059486, -110.053973]
+]);
+console.log(`${resultado.distancia_total_km} km`);
+
+// Al salir, cerrar el motor para que guarde el caché en disco
+app.on('before-quit', () => motor.cerrar());
 ```

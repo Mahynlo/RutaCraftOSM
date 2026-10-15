@@ -13,6 +13,7 @@
 #include <vector>
 #include <filesystem>
 #include <iomanip>
+#include <stdexcept>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -60,120 +61,39 @@ inline bool es_opcion_cli(const std::string& s) {
     return false;
 }
 
-int main(int argc, char* argv[]) {
-    std::string grafo_path = "grafo_mazatan_villapesqueira.bin";
-    std::string puntos_arg = "";
-    std::vector<double> array_coords;
-    std::string salida_path = "";
-    std::string cache_arg = "cache_rutas.json";
-    std::string cache_formato = "json";
-    bool flag_stdout = false;
-    bool no_save_cache = false;
-
-    // Parseo de argumentos CLI
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--grafo" && i + 1 < argc) {
-            grafo_path = argv[++i];
-        } else if (arg == "--puntos" && i + 1 < argc) {
-            puntos_arg = argv[++i];
-        } else if (arg == "--array") {
-            while (i + 1 < argc && !es_opcion_cli(argv[i + 1])) {
-                try {
-                    array_coords.push_back(std::stod(argv[++i]));
-                } catch (...) {
-                    break;
-                }
+// Interpreta un array JSON [[lat, lon], ...]; ignora elementos mal formados
+std::vector<Coordenada> puntos_desde_json(const json& j_puntos) {
+    std::vector<Coordenada> puntos;
+    if (j_puntos.is_array()) {
+        for (const auto& item : j_puntos) {
+            if (item.is_array() && item.size() == 2 && item[0].is_number() && item[1].is_number()) {
+                puntos.push_back({item[0].get<double>(), item[1].get<double>()});
             }
-        } else if (arg == "--salida" && i + 1 < argc) {
-            salida_path = argv[++i];
-        } else if (arg == "--cache" && i + 1 < argc) {
-            cache_arg = argv[++i];
-        } else if (arg == "--cache-formato" && i + 1 < argc) {
-            cache_formato = argv[++i];
-        } else if (arg == "--stdout") {
-            flag_stdout = true;
-        } else if (arg == "--no-save-cache") {
-            no_save_cache = true;
         }
     }
+    return puntos;
+}
 
-    // Validación y carga de puntos GPS
-    std::vector<Coordenada> puntos_gps;
-
-    if (!array_coords.empty()) {
-        if (array_coords.size() % 2 != 0) {
-            std::cerr << "Error(py): cantidad impar de coordenadas en --array\n";
-            return 1;
-        }
-        for (size_t i = 0; i < array_coords.size(); i += 2) {
-            puntos_gps.push_back({array_coords[i], array_coords[i + 1]});
-        }
-    } else if (!puntos_arg.empty()) {
-        try {
-            json j_puntos;
-            if (fs::exists(puntos_arg)) {
-                std::ifstream f(puntos_arg);
-                j_puntos = json::parse(f);
-            } else {
-                j_puntos = json::parse(puntos_arg);
-            }
-
-            if (j_puntos.is_array()) {
-                for (const auto& item : j_puntos) {
-                    if (item.is_array() && item.size() == 2) {
-                        puntos_gps.push_back({item[0].get<double>(), item[1].get<double>()});
-                    }
-                }
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Error(py): Error al interpretar puntos: " << e.what() << "\n";
-            return 1;
-        }
-    } else {
-        std::cerr << "Error(py): debes proporcionar los puntos GPS con --array o --puntos\n";
-        return 1;
-    }
-
+// Calcula la ruta multi-parada completa. Lanza std::runtime_error si no es posible.
+json calcular_ruta(const Grafo& grafo, const KDTree& kdtree, GestorCache& cache_gestor,
+                   const std::vector<Coordenada>& puntos_gps) {
     if (puntos_gps.empty()) {
-        std::cerr << "Error(py): Lista de puntos GPS vacia\n";
-        return 1;
+        throw std::runtime_error("Lista de puntos GPS vacia");
     }
-
-    // Cargar Grafo
-    std::string ruta_real_grafo = resolver_ruta_grafo(grafo_path);
-    Grafo grafo;
-    if (!CargadorGrafo::cargar(ruta_real_grafo, grafo)) {
-        std::cerr << "Error(py): El archivo '" << ruta_real_grafo << "' no existe o formato no valido.\n";
-        return 1;
-    }
-
-    // Cargar Caché
-    GestorCache cache_gestor;
-    bool cache_cargado = cache_gestor.cargar(cache_arg);
-
-    // Construcción del índice espacial KD-Tree
-    KDTree kdtree(grafo.coords);
 
     // Búsqueda de nodos más cercanos
     std::vector<int> nodos_cercanos;
-    std::vector<ConexionVerde> conexiones_verdes;
     nodos_cercanos.reserve(puntos_gps.size());
 
     for (const auto& pt : puntos_gps) {
-        double dist = 0.0;
-        int nodo = kdtree.buscar_nodo_mas_cercano(pt, &dist);
+        int nodo = kdtree.buscar_nodo_mas_cercano(pt);
         if (nodo != -1) {
             nodos_cercanos.push_back(nodo);
-            if (dist > 10.0) {
-                conexiones_verdes.push_back({grafo.coords[nodo], pt});
-            }
         }
     }
 
     if (nodos_cercanos.empty()) {
-        std::cerr << "Error(py): No se pudieron mapear los puntos GPS al grafo.\n";
-        return 1;
+        throw std::runtime_error("No se pudieron mapear los puntos GPS al grafo.");
     }
 
     // Cálculo de la ruta entre segmentos
@@ -189,11 +109,12 @@ int main(int argc, char* argv[]) {
 
         std::vector<int> segmento;
 
-        if (cache_gestor.cache.find(clave) != cache_gestor.cache.end()) {
-            const auto& ruta_osm = cache_gestor.cache[clave];
-            for (int64_t osm_id : ruta_osm) {
-                if (grafo.osm_to_idx.find(osm_id) != grafo.osm_to_idx.end()) {
-                    segmento.push_back(grafo.osm_to_idx[osm_id]);
+        auto en_cache = cache_gestor.cache.find(clave);
+        if (en_cache != cache_gestor.cache.end()) {
+            for (int64_t osm_id : en_cache->second) {
+                auto it = grafo.osm_to_idx.find(osm_id);
+                if (it != grafo.osm_to_idx.end()) {
+                    segmento.push_back(it->second);
                 }
             }
         } else {
@@ -209,9 +130,9 @@ int main(int argc, char* argv[]) {
 
         if (segmento.empty()) {
             // Continuar uniría tramos no conectados con un salto en línea recta
-            std::cerr << "Error(py): No se encontro ruta entre " << u_osm << " y " << v_osm
-                      << " (puntos " << i - 1 << " y " << i << ")\n";
-            return 1;
+            throw std::runtime_error("No se encontro ruta entre " + std::to_string(u_osm) + " y " +
+                                     std::to_string(v_osm) + " (puntos " + std::to_string(i - 1) +
+                                     " y " + std::to_string(i) + ")");
         }
 
         if (i == 1) {
@@ -246,13 +167,158 @@ int main(int argc, char* argv[]) {
         j_puntos_gps.push_back({pt.lat, pt.lon});
     }
 
-    json resultado = {
+    return {
         {"puntos_gps", j_puntos_gps},
         {"ruta", j_ruta},
         {"distancia_total_m", distancia_total},
         {"distancia_total_km", std::round((distancia_total / 1000.0) * 100.0) / 100.0},
         {"instrucciones", j_instrucciones}
     };
+}
+
+// Modo servidor: el grafo se carga una sola vez y cada línea de stdin es una petición
+//   entrada: {"id": 1, "puntos": [[lat, lon], ...]}
+//   salida:  {"id": 1, "ok": true, "resultado": {...}}  |  {"id": 1, "ok": false, "error": "..."}
+// Al cerrarse stdin se guarda el caché (si aplica) y el proceso termina.
+int ejecutar_servidor(const Grafo& grafo, const KDTree& kdtree, GestorCache& cache_gestor) {
+    std::string linea;
+    while (std::getline(std::cin, linea)) {
+        if (linea.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+
+        json respuesta = {{"id", nullptr}};
+        try {
+            json peticion = json::parse(linea);
+            if (peticion.contains("id")) respuesta["id"] = peticion["id"];
+
+            std::vector<Coordenada> puntos = puntos_desde_json(peticion.value("puntos", json::array()));
+            respuesta["resultado"] = calcular_ruta(grafo, kdtree, cache_gestor, puntos);
+            respuesta["ok"] = true;
+        } catch (const std::exception& e) {
+            respuesta.erase("resultado");
+            respuesta["ok"] = false;
+            respuesta["error"] = e.what();
+        }
+
+        std::cout << respuesta.dump(-1, ' ', false, json::error_handler_t::replace) << "\n" << std::flush;
+    }
+    return 0;
+}
+
+int main(int argc, char* argv[]) {
+    std::string grafo_path = "grafo_mazatan_villapesqueira.bin";
+    std::string puntos_arg = "";
+    std::vector<double> array_coords;
+    std::string salida_path = "";
+    std::string cache_arg = "cache_rutas.json";
+    std::string cache_formato = "json";
+    bool flag_stdout = false;
+    bool no_save_cache = false;
+    bool sin_cache = false;
+    bool modo_servidor = false;
+
+    // Parseo de argumentos CLI
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--grafo" && i + 1 < argc) {
+            grafo_path = argv[++i];
+        } else if (arg == "--puntos" && i + 1 < argc) {
+            puntos_arg = argv[++i];
+        } else if (arg == "--array") {
+            while (i + 1 < argc && !es_opcion_cli(argv[i + 1])) {
+                try {
+                    array_coords.push_back(std::stod(argv[++i]));
+                } catch (...) {
+                    break;
+                }
+            }
+        } else if (arg == "--salida" && i + 1 < argc) {
+            salida_path = argv[++i];
+        } else if (arg == "--cache" && i + 1 < argc) {
+            cache_arg = argv[++i];
+        } else if (arg == "--cache-formato" && i + 1 < argc) {
+            cache_formato = argv[++i];
+        } else if (arg == "--stdout") {
+            flag_stdout = true;
+        } else if (arg == "--no-save-cache") {
+            no_save_cache = true;
+        } else if (arg == "--sin-cache") {
+            sin_cache = true;
+        } else if (arg == "--serve") {
+            modo_servidor = true;
+        }
+    }
+
+    // --sin-cache: ni se lee ni se escribe ningún archivo de caché
+    if (sin_cache) {
+        cache_arg = "";
+        no_save_cache = true;
+    }
+
+    // Validación y carga de puntos GPS (no aplica en modo servidor)
+    std::vector<Coordenada> puntos_gps;
+
+    if (modo_servidor) {
+        // Los puntos llegan por stdin
+    } else if (!array_coords.empty()) {
+        if (array_coords.size() % 2 != 0) {
+            std::cerr << "Error(py): cantidad impar de coordenadas en --array\n";
+            return 1;
+        }
+        for (size_t i = 0; i < array_coords.size(); i += 2) {
+            puntos_gps.push_back({array_coords[i], array_coords[i + 1]});
+        }
+    } else if (!puntos_arg.empty()) {
+        try {
+            json j_puntos;
+            if (fs::exists(puntos_arg)) {
+                std::ifstream f(puntos_arg);
+                j_puntos = json::parse(f);
+            } else {
+                j_puntos = json::parse(puntos_arg);
+            }
+            puntos_gps = puntos_desde_json(j_puntos);
+        } catch (const std::exception& e) {
+            std::cerr << "Error(py): Error al interpretar puntos: " << e.what() << "\n";
+            return 1;
+        }
+    } else {
+        std::cerr << "Error(py): debes proporcionar los puntos GPS con --array o --puntos\n";
+        return 1;
+    }
+
+    if (!modo_servidor && puntos_gps.empty()) {
+        std::cerr << "Error(py): Lista de puntos GPS vacia\n";
+        return 1;
+    }
+
+    // Cargar Grafo
+    std::string ruta_real_grafo = resolver_ruta_grafo(grafo_path);
+    Grafo grafo;
+    if (!CargadorGrafo::cargar(ruta_real_grafo, grafo)) {
+        std::cerr << "Error(py): El archivo '" << ruta_real_grafo << "' no existe o formato no valido.\n";
+        return 1;
+    }
+
+    // Cargar Caché
+    GestorCache cache_gestor;
+    cache_gestor.cargar(cache_arg);
+
+    // Construcción del índice espacial KD-Tree
+    KDTree kdtree(grafo.coords);
+
+    int codigo_salida = 0;
+    json resultado;
+
+    if (modo_servidor) {
+        codigo_salida = ejecutar_servidor(grafo, kdtree, cache_gestor);
+    } else {
+        try {
+            resultado = calcular_ruta(grafo, kdtree, cache_gestor, puntos_gps);
+        } catch (const std::exception& e) {
+            std::cerr << "Error(py): " << e.what() << "\n";
+            return 1;
+        }
+    }
 
     // Guardar cache si aplica
     if (!no_save_cache) {
@@ -266,6 +332,8 @@ int main(int argc, char* argv[]) {
             cache_gestor.guardar(cache_arg);
         }
     }
+
+    if (modo_servidor) return codigo_salida;
 
     // Guardar archivo de salida si se solicitó
     if (!salida_path.empty()) {
