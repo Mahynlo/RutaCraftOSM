@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepack": "npm run build",
     "test": "npm run build && node --test src/test-motor.cjs",
     "demo": "npm run build && node src/test-calcularRuta.cjs"
   },
