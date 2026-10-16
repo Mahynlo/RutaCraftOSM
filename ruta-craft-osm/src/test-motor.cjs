@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { calcularRuta, crearMotorRutas } = require("../dist/index.js");
+const { calcularRuta, crearMotorRutas, GRAFO_INCLUIDO, plataformaActual } = require("../dist/index.js");
 
 const TRES_PUNTOS = [[29.065639, -110.056448], [29.062039, -110.059091], [29.059486, -110.053973]];
 
@@ -110,7 +110,7 @@ test("caché y grafo en carpetas con acentos (usuario 'José Muñoz')", async ()
     fs.mkdirSync(dir, { recursive: true });
     try {
         const grafo = path.join(dir, "grafo_señal.bin");
-        fs.copyFileSync(path.join(__dirname, "..", "bin", "cli", "grafos", "grafo_mazatan_villapesqueira.bin"), grafo);
+        fs.copyFileSync(GRAFO_INCLUIDO, grafo);
         const cachePath = path.join(dir, "caché_rutas.json");
 
         const r = await calcularRuta({ puntos: TRES_PUNTOS, grafo, cachePath });
@@ -142,6 +142,25 @@ test("si el motor no puede arrancar, las peticiones se rechazan sin tumbar el pr
     await assert.rejects(motor.calcular(TRES_PUNTOS), /terminó/);
     await motor.cerrar();
     await assert.rejects(calcularRuta({ puntos: TRES_PUNTOS, grafo: "no_existe.bin" }), /no existe/);
+});
+
+test("el paquete incluye el motor de esta plataforma y el grafo", () => {
+    const exe = path.join(__dirname, "..", "bin", plataformaActual(), process.platform === "win32" ? "cli.exe" : "cli");
+    assert.ok(fs.existsSync(exe), `falta ${exe}`);
+    assert.ok(fs.existsSync(GRAFO_INCLUIDO), `falta ${GRAFO_INCLUIDO}`);
+});
+
+test("en una plataforma sin motor compilado el error lo explica", async () => {
+    const original = Object.getOwnPropertyDescriptor(process, "arch");
+    Object.defineProperty(process, "arch", { value: "mips" });
+    try {
+        await assert.rejects(calcularRuta({ puntos: TRES_PUNTOS }), /no incluye el motor para .*-mips/);
+        const motor = crearMotorRutas();
+        await assert.rejects(motor.calcular(TRES_PUNTOS), /no incluye el motor/);
+        await motor.cerrar();
+    } finally {
+        Object.defineProperty(process, "arch", original);
+    }
 });
 
 test("el timeout rechaza la petición", async () => {

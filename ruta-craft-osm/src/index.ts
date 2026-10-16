@@ -1,4 +1,5 @@
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
+import * as fs from "fs";
 import * as path from "path";
 
 export interface CalcularRutaOptions {
@@ -39,13 +40,46 @@ export interface RespuestaRutaCompleta {
 
 const TIMEOUT_DEFAULT_MS = 30000;
 
-// Obtiene el path correcto al binario. Empaquetado con Electron, los binarios no se pueden
-// ejecutar desde dentro de app.asar, así que se usa la copia de app.asar.unpacked.
+/** Plataformas para las que la CI compila el motor (bin/<plataforma>/cli). */
+export const PLATAFORMAS_SOPORTADAS = ["win32-x64", "linux-x64", "darwin-x64", "darwin-arm64"];
+
+/** Plataforma de este proceso en el formato de bin/<plataforma>, p. ej. "win32-x64". */
+export function plataformaActual(): string {
+    return `${process.platform}-${process.arch}`;
+}
+
+// Ruta a un archivo del paquete. Empaquetado con Electron, los binarios no se pueden ejecutar
+// desde dentro de app.asar, así que se usa la copia de app.asar.unpacked.
+function rutaDelPaquete(...partes: string[]): string {
+    return path.join(__dirname, "..", ...partes).replace(/app\.asar([\\/])/, "app.asar.unpacked$1");
+}
+
+/** Grafo incluido en el paquete; se usa cuando no se indica la opción `grafo`. */
+export const GRAFO_INCLUIDO = rutaDelPaquete("bin", "grafos", "grafo_mazatan_villapesqueira.bin");
+
+const binariosVerificados = new Set<string>();
+
+// Binario del motor para esta plataforma. Lanza un error claro si el paquete no lo incluye.
 function getCliExePath(): string {
-    const binaryName = process.platform === "win32" ? "cli.exe" : "cli";
-    return path
-        .join(__dirname, "..", "bin", "cli", binaryName)
-        .replace(/app\.asar([\\/])/, "app.asar.unpacked$1");
+    const plataforma = plataformaActual();
+    const ruta = rutaDelPaquete("bin", plataforma, process.platform === "win32" ? "cli.exe" : "cli");
+    if (binariosVerificados.has(ruta)) return ruta;
+
+    if (!fs.existsSync(ruta)) {
+        throw new Error(
+            `❌ ruta-craft-osm no incluye el motor para ${plataforma} (incluidas: ${PLATAFORMAS_SOPORTADAS.join(", ")}). ` +
+            `Compílalo con CMake (RutaCraftOSM_c) y cópialo a bin/${plataforma}/`);
+    }
+    // Algunos empaquetados (zip, artefactos de CI) pierden el permiso de ejecución en Linux/macOS
+    if (process.platform !== "win32") {
+        try {
+            fs.accessSync(ruta, fs.constants.X_OK);
+        } catch {
+            try { fs.chmodSync(ruta, 0o755); } catch { /* se reportará al ejecutar */ }
+        }
+    }
+    binariosVerificados.add(ruta);
+    return ruta;
 }
 
 function validarPuntos(puntos: unknown): string | null {
@@ -65,10 +99,7 @@ function validarPuntos(puntos: unknown): string | null {
 }
 
 function argsComunes(grafo?: string, cachePath?: string, saveCache?: boolean): string[] {
-    const args: string[] = [];
-    if (grafo) {
-        args.push("--grafo", grafo);
-    }
+    const args: string[] = ["--grafo", grafo ?? GRAFO_INCLUIDO];
     if (cachePath) {
         args.push("--cache", cachePath);
         if (saveCache === false) {
@@ -91,7 +122,12 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<RespuestaRut
         return Promise.reject(new Error(errorPuntos));
     }
 
-    const exePath = getCliExePath();
+    let exePath: string;
+    try {
+        exePath = getCliExePath();
+    } catch (e) {
+        return Promise.reject(e);
+    }
     // Los puntos van por stdin (--puntos -): como argumentos, Windows limita la línea de
     // comandos a ~32 KB y fallaba con más de ~1,300 puntos (spawn ENAMETOOLONG)
     const args: string[] = ["--stdout", ...argsComunes(options.grafo, options.cachePath, options.saveCache), "--puntos", "-"];
@@ -173,7 +209,12 @@ export class MotorRutas {
             return Promise.reject(new Error(errorPuntos));
         }
 
-        const proc = this.iniciar();
+        let proc: ChildProcessWithoutNullStreams;
+        try {
+            proc = this.iniciar();
+        } catch (e) {
+            return Promise.reject(e);
+        }
         const id = this.siguienteId++;
         const timeoutMs = this.opciones.timeoutMs ?? TIMEOUT_DEFAULT_MS;
 

@@ -32,16 +32,19 @@ fs::path obtener_directorio_ejecutable() {
     return exe.parent_path();
 }
 
-// Busca el grafo en el directorio actual, junto al ejecutable y en grafos/ (rutas en UTF-8)
+// Busca el grafo en el directorio actual, junto al ejecutable, en grafos/ y en ../grafos/
+// (paquete npm: bin/<plataforma>/cli con el grafo compartido en bin/grafos/). Rutas en UTF-8.
 fs::path resolver_ruta_grafo(const std::string& ruta_utf8_grafo) {
     const fs::path ruta = ruta_utf8(ruta_utf8_grafo);
     const fs::path exe_dir = obtener_directorio_ejecutable();
+    const fs::path grafos_hermana = exe_dir.parent_path() / "grafos";
     fs::path base_bin = ruta.stem();
     base_bin += ".bin";
 
     for (const fs::path& candidato : {
-             ruta, exe_dir / ruta, exe_dir / "grafos" / ruta, fs::path("grafos") / ruta,
-             base_bin, exe_dir / base_bin, exe_dir / "grafos" / base_bin, fs::path("grafos") / base_bin}) {
+             ruta, exe_dir / ruta, exe_dir / "grafos" / ruta, grafos_hermana / ruta, fs::path("grafos") / ruta,
+             base_bin, exe_dir / base_bin, exe_dir / "grafos" / base_bin, grafos_hermana / base_bin,
+             fs::path("grafos") / base_bin}) {
         if (existe(candidato)) return candidato;
     }
     return ruta;

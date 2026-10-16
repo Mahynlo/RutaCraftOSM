@@ -9,8 +9,9 @@
 * 🧭 **Multi-paradas**: Soporta origen, múltiples paradas intermedias y destino.
 * ⚡ **Ultra Rápido**: Motor nativo en C++20: una ruta multi-parada tarda **< 1 ms** con el motor persistente y **~50 ms** por llamada con `calcularRuta()` en el grafo de producción ([benchmark](./docs/5_RENDIMIENTO.md)).
 * 🌲 **Snapping $O(\log N)$ con KD-Tree**: Búsqueda del nodo más cercano instantánea sin evaluar linealmente todo el grafo.
-* 📦 **Formato Binario `RCO1`**: Carga un grafo de 25 mil nodos en **~35 ms** y uno urbano de 75 mil (Hermosillo) en **~120 ms**.
+* 📦 **Formato Binario `RCO2`**: Arreglos contiguos que se cargan en **~2 ms** (25 mil nodos) y **~6 ms** (Hermosillo, 75 mil nodos), con 8 y 19 MB de memoria.
 * 🧾 **Instrucciones Tipo GPS (*Turn-by-turn*)**: Maniobras de giro (*"Sigue recto"*, *"Gira a la derecha"*), nombres de calles y consolidación de tramos.
+* 💻 **Multiplataforma**: Binarios para Windows x64, Linux x64 y macOS (Intel y Apple Silicon), compilados y probados en CI.
 * 🔌 **Integración Transparente con Electron**: Motor persistente (`crearMotorRutas()`) y detección automática en entornos de producción empaquetados (`app.asar.unpacked`).
 * 🐍 **Gestión Moderna con `uv`**: Extracción y preparación de datos geográficos reproducible y rápida.
 
@@ -42,10 +43,12 @@ RutaCraftOSM/
 │   ├── grafos/                 # Grafos generados (.bin, .json, .pkl)
 │   ├── tests/                  # Pruebas unitarias de Python
 │   ├── preparar_grafo.py       # Extractor y exportador de grafos OSM
+│   ├── formato_rco.py          # Lectura/escritura de RCO1 y RCO2, conversión entre formatos
 │   └── generar_grafos_benchmark.py # Grafo de Hermosillo para el benchmark
 │
 ├── ruta-craft-osm/             # 📦 Paquete npm para Node.js / Electron
-│   ├── bin/cli/                # cli.exe nativo y grafo binario
+│   ├── bin/<plataforma>/       # Motor por plataforma (win32-x64, linux-x64, darwin-x64, darwin-arm64)
+│   ├── bin/grafos/             # Grafo RCO2 incluido (compartido)
 │   ├── src/index.ts            # Wrapper TypeScript
 │   └── package.json            # Configuración npm
 │
@@ -71,7 +74,7 @@ cd ../RutaCraftOSM_c
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release   # genera bin/cli.exe (o bin/cli en Linux)
 ```
-En Windows con MinGW también sirve el atajo `.\build.bat`. Después copia `bin/cli.exe` a `ruta-craft-osm/bin/cli/` para actualizar el paquete npm.
+En Windows con MinGW también sirve el atajo `.\build.bat`. Después copia el binario a `ruta-craft-osm/bin/<plataforma>/` (por ejemplo `bin/win32-x64/cli.exe`) para actualizar el paquete npm. La CI genera además un paquete con los binarios de las cuatro plataformas (artefacto `ruta-craft-osm-multiplataforma`).
 
 ### 3. Usar en tu proyecto Node.js / Electron
 ```powershell

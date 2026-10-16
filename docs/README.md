@@ -21,7 +21,7 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
 
 3. [⚡ Motor de Ruteo en C++ (`RutaCraftOSM_c`)](./3_MOTOR_CPP_RUTACRAFT.md)
    - Arquitectura modular del código C++20.
-   - Estructura y especificación del formato binario `RCO1`.
+   - Especificación del formato binario `RCO2` (y compatibilidad con `RCO1`).
    - Búsqueda espacial $O(\log N)$ con KD-Tree.
    - Algoritmo A\* con heurística euclidiana plana en memoria contigua.
    - Generador de maniobras giro a giro (*turn-by-turn*) y consolidación.
@@ -72,6 +72,7 @@ RutaCraftOSM/
 │   ├── grafos/                 # Archivos de grafo generados (.bin, .pkl, .json)
 │   ├── tests/                  # Pruebas unitarias de Python y scripts de comparación
 │   ├── preparar_grafo.py       # Extractor y exportador de grafos OSM
+│   ├── formato_rco.py          # Lectura/escritura de RCO1 y RCO2
 │   ├── generar_grafos_benchmark.py # Descarga el grafo de Hermosillo para el benchmark
 │   ├── core.py                 # Motor Python de referencia (paridad)
 │   └── cli.py                  # CLI del motor Python de referencia
@@ -86,7 +87,8 @@ RutaCraftOSM/
 │   └── build.bat               # Script de compilación estática (MinGW)
 │
 ├── ruta-craft-osm/             # Paquete npm para Node.js y Electron
-│   ├── bin/cli/                # cli.exe nativo y grafo binario
+│   ├── bin/<plataforma>/       # Motor por plataforma (win32-x64, linux-x64, darwin-x64, darwin-arm64)
+│   ├── bin/grafos/             # Grafo RCO2 incluido
 │   ├── src/index.ts            # Wrapper TypeScript
 │   ├── src/test-motor.cjs      # Pruebas del wrapper (npm test)
 │   ├── dist/                   # Código JavaScript compilado (.js, .d.ts)

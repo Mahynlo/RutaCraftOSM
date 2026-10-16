@@ -17,7 +17,7 @@ sequenceDiagram
 
     App->>TS: calcularRuta({ puntos: [...] })
     TS->>Cpp: spawn("cli.exe", ["--stdout", "--puntos", "-"]) + puntos por stdin
-    Cpp->>Bin: Carga del grafo (~35 ms)
+    Cpp->>Bin: Carga del grafo (~2 ms)
     Cpp->>Cpp: KD-Tree + A* + Instrucciones
     Cpp-->>TS: Emite JSON en stdout (~50ms)
     TS-->>App: Resuelve Promise con RespuestaRutaCompleta
@@ -44,29 +44,40 @@ sequenceDiagram
 | :--- | :--- | :--- |
 | Proceso | Uno nuevo por llamada | Uno persistente |
 | Carga de grafo + KD-Tree | En cada llamada | Una sola vez |
-| Tiempo por ruta, Mazatán - Villa Pesqueira (25 mil nodos) | ~50–56 ms | ~0.07–0.7 ms |
-| Tiempo por ruta, ciudad de Hermosillo (75 mil nodos) | ~160–170 ms | ~3–5 ms |
+| Tiempo por ruta, Mazatán - Villa Pesqueira (25 mil nodos) | ~30–60 ms | ~0.05–0.5 ms |
+| Tiempo por ruta, ciudad de Hermosillo (75 mil nodos) | ~45–50 ms | ~2–3 ms |
 | Caché en disco | Se lee y guarda en cada llamada | Se lee al iniciar, se guarda en `cerrar()` |
 
 Cifras medidas en [5. Rendimiento del Motor C++](./5_RENDIMIENTO.md). Como la mayor parte del tiempo de `calcularRuta()` es arrancar el proceso y cargar el grafo, en Electron conviene usar el motor persistente.
 
 ---
 
-## 2. Detección Automática de Entorno (Electron vs Node)
+## 2. Plataformas y Empaquetado con Electron
 
-En [`src/index.ts`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/ruta-craft-osm/src/index.ts), la función `getCliExePath()` resuelve el binario relativo al propio paquete. Si la ruta pasa por `app.asar` (Electron empaquetado en producción), la redirige a `app.asar.unpacked`, porque un ejecutable no puede lanzarse desde dentro del archivo `.asar`:
+El paquete incluye un motor por plataforma y un grafo compartido:
 
-```typescript
-function getCliExePath(): string {
-    const binaryName = process.platform === "win32" ? "cli.exe" : "cli";
-    return path
-        .join(__dirname, "..", "bin", "cli", binaryName)
-        .replace(/app\.asar([\\/])/, "app.asar.unpacked$1");
-}
+```text
+ruta-craft-osm/bin/
+├── win32-x64/cli.exe
+├── linux-x64/cli
+├── darwin-x64/cli          (macOS Intel)
+├── darwin-arm64/cli        (macOS Apple Silicon)
+└── grafos/grafo_mazatan_villapesqueira.bin
 ```
 
-> [!IMPORTANT]
-> Al empaquetar con `electron-builder` o `electron-forge`, asegúrate de incluir en tu configuración `asarUnpack: ["**/node_modules/ruta-craft-osm/bin/**"]` para que el ejecutable `cli.exe` y el archivo `grafo.bin` queden fuera del archivo comprimido `.asar`.
+El wrapper elige el binario con `process.platform` y `process.arch` (`plataformaActual()` devuelve, por ejemplo, `"win32-x64"`). Si el paquete no incluye esa plataforma, `calcularRuta()` y `motor.calcular()` se rechazan con un mensaje que la nombra. En Linux y macOS, si el binario perdió el permiso de ejecución (por ejemplo al descomprimir un zip), el wrapper lo restaura.
+
+> [!NOTE]
+> El repositorio solo versiona el binario de Windows (`bin/win32-x64/`), que es el que usa AguaVP. La CI compila y prueba las cuatro plataformas y publica un paquete con todas en el artefacto **`ruta-craft-osm-multiplataforma`**.
+
+Si la ruta del paquete pasa por `app.asar` (Electron empaquetado en producción), el wrapper usa `app.asar.unpacked`, porque un ejecutable no puede lanzarse desde dentro del archivo `.asar`. electron-builder desempaqueta automáticamente todo el módulo cuando encuentra un ejecutable; para no depender de esa detección, se puede declarar explícitamente:
+
+```yaml
+asarUnpack:
+  - node_modules/ruta-craft-osm/bin/**
+```
+
+La constante `GRAFO_INCLUIDO` contiene la ruta absoluta del grafo del paquete, que se usa cuando no se pasa la opción `grafo`.
 
 ---
 

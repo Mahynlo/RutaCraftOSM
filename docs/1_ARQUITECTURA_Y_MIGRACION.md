@@ -8,13 +8,13 @@
 flowchart TD
     subgraph Capa_Preparacion ["1. Preparación de Datos (Python + uv)"]
         OSM["OpenStreetMap (Overpass API)"] -->|OSMnx + GeoPandas| PREP["preparar_grafo.py"]
-        PREP -->|Genera| BIN["grafo_zona.bin (Formato RCO1)"]
+        PREP -->|Genera| BIN["grafo_zona.bin (Formato RCO2)"]
     end
 
     subgraph Capa_Motor ["2. Motor de Ruteo (C++ Nativo)"]
-        BIN -->|"Carga del grafo (~35 ms)"| MOTOR["RutaCraftOSM_c (cli.exe)"]
+        BIN -->|"Carga del grafo (~2 ms)"| MOTOR["RutaCraftOSM_c (cli.exe)"]
         KDTREE["KD-Tree (Snapping O(log N))"] --> MOTOR
-        ASTAR["A* en Memoria Contigua"] --> MOTOR
+        ASTAR["A* sobre grafo CSR"] --> MOTOR
         INST["Generador de Maniobras Turn-by-Turn"] --> MOTOR
     end
 
@@ -35,7 +35,7 @@ La versión original en Python (empaquetada con Nuitka) presentaba cuellos de bo
 | Problema en Python / Nuitka | Solución en C++20 |
 | :--- | :--- |
 | **Búsqueda lineal $O(N)$ en snapping**: Para cada punto GPS se evaluaban los 24,465 nodos del grafo calculando Haversine en Python puro. Con 23 puntos, se ejecutaban más de 500,000 llamadas trigonométricas. | **KD-Tree espacial 2D**: Indexación espacial en memoria que reduce la búsqueda a $O(\log N)$ (apenas 15 a 20 operaciones por punto). |
-| **Arranque en frío (*Cold Start*)**: Iniciar el runtime de Python, cargar módulos e inicializar la máquina virtual tardaba entre 200 ms y 500 ms en cada ejecución. | **Cero arranque en frío**: El ejecutable C++ arranca y carga el grafo de producción en **~35 ms**, y con el motor persistente esa carga se paga una sola vez ([ver benchmark](./5_RENDIMIENTO.md)). |
+| **Arranque en frío (*Cold Start*)**: Iniciar el runtime de Python, cargar módulos e inicializar la máquina virtual tardaba entre 200 ms y 500 ms en cada ejecución. | **Cero arranque en frío**: El ejecutable C++ arranca y carga el grafo de producción en **~2 ms**, y con el motor persistente esa carga se paga una sola vez ([ver benchmark](./5_RENDIMIENTO.md)). |
 | **Estructuras en memoria dispersas**: Diccionarios de Python (`dict`) con claves `int64` y tuplas, provocando continuos fallos de caché de CPU (*cache misses*). | **Memoria contigua**: Uso de `std::vector` y tipos planos que aprovechan la memoria caché L1/L2/L3 del procesador. |
 | **Dependencia de DLLs externas**: Nuitka requería distribuir `python311.dll`, `vcruntime140.dll`, `libcrypto` y múltiples archivos `.pyd` (pesando > 15 MB). | **Binario 100% estático**: Un solo archivo `.exe` compilado con `-static` sin ninguna dependencia externa. |
 

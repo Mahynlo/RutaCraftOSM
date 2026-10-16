@@ -22,17 +22,14 @@ inline std::vector<int> tramo_desde_cache(const Grafo& grafo, const std::vector<
     std::vector<int> tramo;
     tramo.reserve(ruta_osm.size());
     for (int64_t osm_id : ruta_osm) {
-        auto it = grafo.osm_to_idx.find(osm_id);
-        if (it == grafo.osm_to_idx.end()) return {};
-        tramo.push_back(it->second);
+        const int indice = grafo.indice_osm(osm_id);
+        if (indice < 0) return {};
+        tramo.push_back(indice);
     }
     if (tramo.empty() || tramo.front() != u || tramo.back() != v) return {};
 
     for (size_t k = 1; k < tramo.size(); ++k) {
-        const auto& aristas = grafo.adj_list[tramo[k - 1]];
-        bool conectado = std::any_of(aristas.begin(), aristas.end(),
-                                     [&](const Arista& a) { return a.destino == tramo[k]; });
-        if (!conectado) return {};
+        if (!grafo.conectados(tramo[k - 1], tramo[k])) return {};
     }
     return tramo;
 }

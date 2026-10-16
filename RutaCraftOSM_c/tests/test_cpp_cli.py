@@ -278,31 +278,69 @@ class TestRobustez(unittest.TestCase):
         self.assertIn("error al interpretar puntos", result.stderr.lower())
 
 
+sys.path.insert(0, PY_DIR)
+import formato_rco  # noqa: E402  (lector/escritor de los formatos RCO1 y RCO2)
+
+
 def leer_grafo_bin(ruta):
-    """Lee un grafo RCO1: devuelve (coordenadas, lista de adyacencia [(destino, peso)])."""
-    import struct
-    with open(ruta, "rb") as f:
-        d = f.read()
-    o = 4
-    n, = struct.unpack_from("<I", d, o)
-    o += 4
-    coords = []
-    for _ in range(n):
-        _, lat, lon = struct.unpack_from("<qdd", d, o)
-        o += 24
-        coords.append((lat, lon))
-    adj = [[] for _ in range(n)]
-    for u in range(n):
-        k, = struct.unpack_from("<I", d, o)
-        o += 4
-        for _ in range(k):
-            v, w = struct.unpack_from("<If", d, o)
-            o += 8
-            for _ in range(2):  # nombre de la calle y tipo de vía
-                largo, = struct.unpack_from("<H", d, o)
-                o += 2 + largo
-            adj[u].append((v, w))
-    return coords, adj
+    """Devuelve (coordenadas, lista de adyacencia [(destino, peso)])."""
+    g = formato_rco.leer(ruta)
+    return g.coords, [[(v, w) for v, w, _ in aristas] for aristas in g.adyacencia]
+
+
+class TestFormatosGrafo(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def calcular(self, grafo, puntos=TRES_PUNTOS):
+        return subprocess.run([SCRIPT_PATH, "--grafo", grafo, "--sin-cache", "--puntos", json.dumps(puntos)],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+
+    def test_grafo_de_produccion_es_rco2(self):
+        self.assertEqual(formato_rco.leer(GRAFO_PATH).formato, "RCO2")
+
+    def test_rco1_da_la_misma_ruta_que_rco2(self):
+        # Compatibilidad: un grafo RCO1 (con aristas duplicadas, como lo exportaba la versión anterior)
+        g = formato_rco.leer(GRAFO_PATH)
+        g.adyacencia = [aristas + aristas for aristas in g.adyacencia]
+        rco1 = os.path.join(self.tmp.name, "grafo_rco1.bin")
+        formato_rco.escribir_rco1(rco1, g)
+
+        with open(PUNTOS_MUNICIPIO, encoding="utf-8") as f:
+            puntos = json.load(f)
+        a, b = self.calcular(GRAFO_PATH, puntos), self.calcular(rco1, puntos)
+        self.assertEqual(b.returncode, 0, b.stderr)
+        self.assertEqual(json.loads(a.stdout), json.loads(b.stdout))
+
+    def test_archivos_truncados_o_corruptos_se_rechazan(self):
+        with open(GRAFO_PATH, "rb") as f:
+            datos = f.read()
+        g = formato_rco.leer(GRAFO_PATH)
+        rco1 = os.path.join(self.tmp.name, "rco1.bin")
+        formato_rco.escribir_rco1(rco1, g)
+        with open(rco1, "rb") as f:
+            datos_rco1 = f.read()
+
+        corrupto = bytearray(datos)
+        n = len(g.osm_ids)
+        inicio_destinos = 32 + n * 8 + n * 16 + (n + 1) * 4
+        corrupto[inicio_destinos:inicio_destinos + 4] = (n + 5).to_bytes(4, "little")  # destino fuera de rango
+
+        casos = {
+            "rco2_truncado.bin": datos[:len(datos) // 2],
+            "rco2_basura_al_final.bin": datos + b"xx",
+            "rco2_destino_invalido.bin": bytes(corrupto),
+            "rco1_truncado.bin": datos_rco1[:len(datos_rco1) - 10],
+            "vacio.bin": b"",
+        }
+        for nombre, contenido in casos.items():
+            ruta = os.path.join(self.tmp.name, nombre)
+            with open(ruta, "wb") as f:
+                f.write(contenido)
+            r = self.calcular(ruta)
+            self.assertEqual(r.returncode, 1, nombre)
+            self.assertIn("formato no valido", r.stderr, nombre)
 
 
 def servir_muchas(puntos_por_peticion):

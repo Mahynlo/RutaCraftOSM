@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
+
+# macOS: macOS 11 o superior (std::filesystem requiere 10.15). Debe definirse antes de project().
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Versión mínima de macOS")
+
 project(RutaCraftOSM LANGUAGES CXX)
+
+# Binario estático en Windows (MinGW) y Linux: el ejecutable no depende de las DLL de MinGW ni de
+# la versión de glibc de la máquina donde se instala la app. macOS no admite binarios estáticos.
+option(RUTACRAFT_ESTATICO "Enlazar el motor de forma estática (MinGW y Linux)" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,8 +43,7 @@ foreach(target cli benchmark)
         set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
     else()
         target_compile_options(${target} PRIVATE -O3 -Wall)
-        # Binario estático: cli.exe no depende de las DLL de MinGW al distribuirse con Electron
-        if(MINGW)
+        if(RUTACRAFT_ESTATICO AND (MINGW OR CMAKE_SYSTEM_NAME STREQUAL "Linux"))
             target_link_options(${target} PRIVATE -static)
         endif()
     endif()

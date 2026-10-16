@@ -56,12 +56,23 @@ Al ejecutarse, `preparar_grafo.py` genera tres archivos en la carpeta `grafos/`:
 
 | Archivo | Formato | Propósito | Tiempo de Carga |
 | :--- | :--- | :--- | :---: |
-| `grafo_mazatan_villapesqueira.bin` | **Binario RCO1** | Consumo directo por el motor C++ | **~35 ms** |
+| `grafo_mazatan_villapesqueira.bin` | **Binario RCO2** | Consumo directo por el motor C++ | **~2 ms** |
 | `grafo_mazatan_villapesqueira.json` | **JSON** | Inspección humana y debugging (el motor C++ también lo acepta) | ~440 ms |
 | `grafo_mazatan_villapesqueira.pkl` | **Pickle** | Motor Python de referencia y prueba de paridad | ~80 ms |
 
 > [!TIP]
-> Usa siempre el `.bin` en producción: el motor C++ carga el JSON unas 13 veces más lento.
+> Usa siempre el `.bin` en producción: el motor C++ carga el JSON cientos de veces más lento.
+
+### Formato y conversión (`formato_rco.py`)
+
+[`formato_rco.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/formato_rco.py) lee los formatos `RCO1` (histórico) y `RCO2` (actual) y escribe `RCO2`. Al escribir deja una sola arista por par de nodos (las duplicadas del exportador anterior no cambian las rutas). Sirve para convertir grafos ya generados sin volver a descargarlos de OpenStreetMap:
+
+```powershell
+uv run python formato_rco.py info grafos/grafo_mazatan_villapesqueira.bin
+uv run python formato_rco.py convertir grafo_viejo_rco1.bin grafo_nuevo.bin [--dirigido]
+```
+
+El motor C++ sigue aceptando `RCO1`, pero `RCO2` ocupa un tercio del espacio y carga unas 20 veces más rápido.
 
 ---
 

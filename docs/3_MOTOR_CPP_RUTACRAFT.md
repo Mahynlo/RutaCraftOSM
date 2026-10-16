@@ -10,12 +10,13 @@ El motor en C++20 implementa un sistema de navegación y cálculo de rutas autó
 RutaCraftOSM_c/src/main.cpp     # CLI: parseo de opciones, modo clásico y modo servidor (--serve)
 RutaCraftOSM_c/bench/           # Benchmark por fases (ver 5. Rendimiento)
 RutaCraftOSM_c/include/
-├── types.hpp           # Estructuras de datos base (Coordenada, Arista, Grafo, etc.)
+├── types.hpp           # Coordenada, Grafo (formato CSR) e Instruccion
 ├── geo_utils.hpp       # Fórmulas geométricas (Haversine, distancias planas y rumbos)
 ├── kdtree.hpp          # Índice espacial KD-Tree 2D para snapping ultra rápido
 ├── astar.hpp           # Algoritmo A* en memoria contigua
 ├── instrucciones.hpp   # Generador de maniobras giro a giro y consolidación
-├── grafo.hpp           # Lector de formatos binarios (.bin RCO1) y JSON
+├── grafo.hpp           # Cargador de grafos RCO2, RCO1 (compatibilidad) y JSON
+├── archivos.hpp        # Rutas UTF-8, argumentos Unicode y ubicación del ejecutable por sistema operativo
 ├── cache.hpp           # Gestor de caché de rutas con persistencia JSON
 ├── ruta.hpp            # calcular_ruta(): snapping + A* por tramo + instrucciones (usado por la CLI y el benchmark)
 └── json.hpp            # Parser y serializador JSON (nlohmann/json)
@@ -23,29 +24,37 @@ RutaCraftOSM_c/include/
 
 ---
 
-## 2. Especificación del Formato Binario `RCO1`
+## 2. Especificación del Formato Binario `RCO2`
 
-Para cargar rápido (~35 ms el grafo de producción, ver [benchmark](./5_RENDIMIENTO.md)), el grafo se empaqueta en una estructura binaria secuencial directa sin overhead de parsing de texto:
+El grafo se guarda como arreglos contiguos en formato **CSR** (*Compressed Sparse Row*): el motor lee el archivo de una vez y copia cada bloque directamente a memoria, sin interpretar arista por arista. Cada nombre de calle se guarda una sola vez. Todos los valores son *little-endian*:
 
 ```
-[0..3]     Magic Number: "RCO1" (4 bytes)
-[4..7]     num_nodos: uint32 (4 bytes)
-
--- Bloque de Nodos (num_nodos repeticiones) --
-   osm_id: int64 (8 bytes)
-   lat:    float64 (8 bytes)
-   lon:    float64 (8 bytes)
-
--- Bloque de Lista de Adyacencia (num_nodos repeticiones) --
-   num_aristas: uint32 (4 bytes)
-   -- Por cada arista --
-      destino_idx: uint32 (4 bytes)  [Índice de 0 a num_nodos - 1]
-      peso:        float32 (4 bytes) [Longitud en metros]
-      len_calle:   uint16 (2 bytes)
-      calle_utf8:  char[len_calle]
-      len_tipo:    uint16 (2 bytes)
-      tipo_utf8:   char[len_tipo]
+Encabezado (32 bytes)
+   char[4]  "RCO2"
+   uint32   versión (2)
+   uint32   flags            bit 0: respeta los sentidos de las calles
+   uint32   N                nodos
+   uint32   E                aristas
+   uint32   K                nombres de calle (el id 0 es "" = calle sin nombre)
+   uint32   B                bytes de la tabla de nombres
+   uint32   reservado (0)
+int64    osm_ids[N]
+float64  coords[2N]           lat, lon intercalados
+uint32   inicio_aristas[N+1]  aristas del nodo u: [inicio_aristas[u], inicio_aristas[u+1])
+uint32   destino[E]           índice del nodo destino
+float32  peso[E]              longitud en metros
+uint32   nombre_id[E]         índice en la tabla de nombres
+uint32   inicio_nombres[K+1]
+uint8    nombres[B]           UTF-8 concatenado
 ```
+
+* **Validación**: el tamaño esperado se calcula con el encabezado, así que un archivo truncado o con datos de más se rechaza. También se verifica que todos los índices estén en rango, para que un archivo corrupto no provoque accesos fuera de memoria.
+* **Compatibilidad**: el motor sigue cargando el formato histórico `RCO1` (y JSON) y lo convierte a la misma estructura en memoria. [`formato_rco.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/formato_rco.py) convierte archivos `RCO1` a `RCO2`.
+
+| Grafo | RCO1 | RCO2 |
+| :--- | ---: | ---: |
+| Mazatán - Villa Pesqueira (24 mil nodos) | 4.1 MB · carga 32 ms · 15.8 MB en memoria | 1.3 MB · carga ~2 ms · 7.9 MB |
+| Ciudad de Hermosillo (75 mil nodos) | 13.5 MB · carga 106 ms · 47 MB en memoria | 4.3 MB · carga ~6 ms · 19.2 MB |
 
 ---
 
@@ -63,7 +72,7 @@ En lugar de calcular distancias contra todos los nodos del mapa (escaneo $O(N)$)
 
 La clase `Enrutador` en [`astar.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/astar.hpp) implementa el algoritmo A\* optimizado para hardware moderno:
 
-1. **Memoria Contigua**: Los arreglos `g_score`, `came_from` y `closed` son vectores contiguos (`std::vector<float>` y `std::vector<int>`) de tamaño $N$, indexados directamente por el ID interno del nodo ($0 \dots N-1$).
+1. **Memoria reutilizada**: `g`, `padre`, `cerrado` y el montículo se reservan una sola vez (por hilo) y se reutilizan en cada búsqueda. Una marca de "generación" indica qué valores pertenecen a la búsqueda actual, así que no hay que reiniciar arreglos de tamaño $N$ por cada tramo de la ruta.
 2. **Min-Heap de Alto Rendimiento**: `std::priority_queue` sobre `std::pair<float, int>`.
 3. **Aproximación Euclidiana Equirrectangular**:
    Para la heurística de distancia estimada al destino:
@@ -101,7 +110,7 @@ Comparado con la versión anterior (que consolidaba segmento por segmento), las 
 
 ## 6. Compilación del Motor
 
-Para compilar el ejecutable estático autónomo `bin/cli.exe` con CMake (MinGW, MSVC o GCC en Linux):
+Para compilar el ejecutable `bin/cli.exe` (`bin/cli` en Linux y macOS) con CMake (MinGW, MSVC, GCC o Clang). En Windows (MinGW) y Linux el binario es estático, así que no depende de las DLL de MinGW ni de la versión de glibc del equipo; en macOS requiere macOS 11 o superior:
 
 ```powershell
 cd RutaCraftOSM_c
@@ -141,7 +150,7 @@ $grafo = "..\RutaCraftOSM\grafos\grafo_mazatan_villapesqueira.bin"
 ```
 
 > [!TIP]
-> En el paquete npm (`ruta-craft-osm/bin/cli/`) el grafo está en `grafos/` junto al ejecutable, por lo que ahí no hace falta `--grafo`.
+> En el paquete npm el motor está en `bin/<plataforma>/` y el grafo en `bin/grafos/`; el motor también busca ahí (`../grafos/`), por lo que no hace falta `--grafo`.
 
 | Opción | Descripción |
 | :--- | :--- |

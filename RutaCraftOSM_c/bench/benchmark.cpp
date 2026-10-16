@@ -69,8 +69,7 @@ int main(int argc, char* argv[]) {
     }
     double carga_ms = ms_desde(t);
 
-    size_t aristas = 0;
-    for (const auto& lista : grafo.adj_list) aristas += lista.size();
+    const size_t aristas = grafo.num_aristas();
 
     // Fase 2: índice espacial
     t = Reloj::now();

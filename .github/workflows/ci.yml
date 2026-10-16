@@ -10,12 +10,16 @@ env:
 
 jobs:
   motor:
-    name: Motor C++ y Python (${{ matrix.os }})
+    name: Motor y wrapper (${{ matrix.plataforma }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        include:
+          - { os: windows-latest, plataforma: win32-x64, exe: cli.exe }
+          - { os: ubuntu-latest, plataforma: linux-x64, exe: cli }
+          - { os: macos-15-intel, plataforma: darwin-x64, exe: cli }
+          - { os: macos-latest, plataforma: darwin-arm64, exe: cli }
     steps:
       - uses: actions/checkout@v4
 
@@ -23,44 +27,75 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Compilar motor C++
         run: |
           cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build -DCMAKE_BUILD_TYPE=Release
           cmake --build RutaCraftOSM_c/build --config Release
 
-      - name: Pruebas del motor C++ (incluye paridad con Python)
+      - name: Pruebas del motor C++ (incluye paridad con Python, formatos y rutas Unicode)
         run: python -m unittest RutaCraftOSM_c/tests/test_cpp_cli.py -v
 
       - name: Pruebas del motor Python
         working-directory: RutaCraftOSM
         run: python -m unittest tests/test_cli.py tests/test_cli_errores.py -v
 
-      - name: Publicar binario de Windows
-        if: runner.os == 'Windows'
+      - name: Pruebas del wrapper con el binario recién compilado
+        shell: bash
+        run: |
+          mkdir -p ruta-craft-osm/bin/${{ matrix.plataforma }}
+          cp RutaCraftOSM_c/bin/${{ matrix.exe }} ruta-craft-osm/bin/${{ matrix.plataforma }}/
+          cd ruta-craft-osm
+          npm install --no-fund --no-audit
+          npm test
+
+      - name: Publicar binario
         uses: actions/upload-artifact@v4
         with:
-          name: cli-windows
-          path: RutaCraftOSM_c/bin/cli.exe
+          name: motor-${{ matrix.plataforma }}
+          path: RutaCraftOSM_c/bin/${{ matrix.exe }}
 
-  npm:
-    name: Wrapper TypeScript (Windows)
+  paquete:
+    name: Paquete npm multiplataforma
     needs: motor
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Usar el binario recién compilado
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: cli-windows
-          path: ruta-craft-osm/bin/cli
+          pattern: motor-*
+          path: binarios
+
+      - name: Reunir los binarios de todas las plataformas
+        run: |
+          for dir in binarios/motor-*; do
+            plataforma="${dir#binarios/motor-}"
+            mkdir -p "ruta-craft-osm/bin/$plataforma"
+            cp "$dir"/* "ruta-craft-osm/bin/$plataforma/"
+          done
+          # Los artefactos de GitHub no conservan el permiso de ejecución
+          chmod +x ruta-craft-osm/bin/linux-*/cli ruta-craft-osm/bin/darwin-*/cli
+          find ruta-craft-osm/bin -type f | sort
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Instalar y probar
+      - name: Empaquetar y verificar el contenido
         working-directory: ruta-craft-osm
         run: |
-          npm install
-          npm test
+          npm install --no-fund --no-audit
+          npm pack
+          for f in package/bin/win32-x64/cli.exe package/bin/linux-x64/cli package/bin/darwin-x64/cli \
+                   package/bin/darwin-arm64/cli package/bin/grafos/grafo_mazatan_villapesqueira.bin package/dist/index.js; do
+            tar tzf ruta-craft-osm-*.tgz | grep -qx "$f" || { echo "Falta $f en el paquete"; exit 1; }
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruta-craft-osm-multiplataforma
+          path: ruta-craft-osm/ruta-craft-osm-*.tgz

@@ -103,7 +103,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div>
                     <h2 style="font-size: 1.4rem; font-weight: 800;">⚡ Rendimiento del Motor C++20</h2>
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">Ruta municipal de 23 paradas (Mazatán - Villa Pesqueira) · medido el 2026-10-14</p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Ruta municipal de 23 paradas (Mazatán - Villa Pesqueira) · medido el 2026-10-15</p>
                 </div>
                 <a href="doc.html?doc=5_RENDIMIENTO.md" style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; text-decoration: none;">
                     Ver benchmark completo <i class="fa-solid fa-arrow-right"></i>
@@ -113,23 +113,23 @@
             <div class="bench-grid">
                 <div class="stat-box">
                     <div class="stat-label">Motor persistente</div>
-                    <div class="stat-num" style="color: var(--cpp);">0.67 ms</div>
+                    <div class="stat-num" style="color: var(--cpp);">0.54 ms</div>
                     <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">Por ruta, grafo ya cargado</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">calcularRuta()</div>
-                    <div class="stat-num" style="color: var(--primary);">56 ms</div>
+                    <div class="stat-num" style="color: var(--primary);">~30–60 ms</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">Incluye arrancar cli.exe y cargar el grafo</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Ciudad de Hermosillo</div>
-                    <div class="stat-num" style="color: var(--python);">3–5 ms</div>
+                    <div class="stat-num" style="color: var(--python);">2–3 ms</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">Por ruta en un grafo de 75 mil nodos</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Consumo de RAM</div>
-                    <div class="stat-num" style="color: var(--purple);">16 MB</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">47 MB con el grafo de Hermosillo</div>
+                    <div class="stat-num" style="color: var(--purple);">8 MB</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">19 MB con el grafo de Hermosillo</div>
                 </div>
             </div>
         </section>
@@ -160,7 +160,7 @@
                 <div>
                     <div class="doc-icon icon-cyan"><i class="fa-solid fa-microchip"></i></div>
                     <div class="doc-title">3. Motor Nativo C++20</div>
-                    <div class="doc-desc">Formato binario RCO1, KD-Tree 2D, algoritmo A*, compilación con CMake y referencia de la CLI.</div>
+                    <div class="doc-desc">Formato binario RCO2, KD-Tree 2D, algoritmo A*, compilación multiplataforma con CMake y referencia de la CLI.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
@@ -257,7 +257,7 @@ ipcMain.<span class="token-fn">handle</span>(<span class="token-str">'calcular-r
 app.<span class="token-fn">on</span>(<span class="token-str">'before-quit'</span>, () =&gt; motor.<span class="token-fn">cerrar</span>());</code></pre>
 
             <!-- Tab 3: CLI -->
-            <pre class="code-panel" id="panel-py"><code><span class="token-com"># Desde ruta-craft-osm/bin/cli/ (el grafo está en grafos/ junto al ejecutable)</span>
+            <pre class="code-panel" id="panel-py"><code><span class="token-com"># Desde ruta-craft-osm/bin/win32-x64/ (el motor encuentra el grafo en ../grafos/)</span>
 <span class="token-cmd">.\cli.exe</span> --array 29.065639 -110.056448 29.059486 -110.053973 --sin-cache
 
 <span class="token-com"># Puntos desde un archivo JSON y resultado en otro archivo</span>

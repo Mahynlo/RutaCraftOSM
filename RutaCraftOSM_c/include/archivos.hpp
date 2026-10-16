@@ -19,6 +19,10 @@
 #endif
 #include <windows.h>
 #include <shellapi.h>
+#elif defined(__APPLE__)
+#include <cstdint>
+#include <cstring>
+#include <mach-o/dyld.h>
 #endif
 
 namespace rutacraft {
@@ -79,6 +83,15 @@ inline fs::path ruta_ejecutable() {
         }
         buffer.resize(buffer.size() * 2);  // Rutas más largas que MAX_PATH
     }
+#elif defined(__APPLE__)
+    uint32_t tamano = 0;
+    _NSGetExecutablePath(nullptr, &tamano);  // Devuelve el tamaño necesario
+    std::string buffer(tamano, '\0');
+    if (_NSGetExecutablePath(buffer.data(), &tamano) != 0) return {};
+    buffer.resize(std::strlen(buffer.c_str()));
+    std::error_code ec;
+    fs::path canonica = fs::weakly_canonical(fs::path(buffer), ec);  // Resuelve enlaces simbólicos
+    return ec ? fs::path(buffer) : canonica;
 #else
     std::error_code ec;
     fs::path exe = fs::read_symlink("/proc/self/exe", ec);

@@ -21,14 +21,8 @@ public:
     static constexpr double CORTE_SIN_NOMBRE = 45.0;     // vías sin nombre: separar en giros mayores
     static constexpr double CORTE_CON_NOMBRE = 120.0;    // misma calle: separar solo giros muy cerrados
 
-    static std::string buscar_nombre_calle(const Grafo& grafo, int u, int v) {
-        if (u < 0 || u >= static_cast<int>(grafo.num_nodos())) return "desconocida";
-        for (const auto& arista : grafo.adj_list[u]) {
-            if (arista.destino == v) {
-                return arista.calle.empty() ? "desconocida" : arista.calle;
-            }
-        }
-        return "desconocida";
+    static const std::string& buscar_nombre_calle(const Grafo& grafo, int u, int v) {
+        return grafo.calle(u, v);
     }
 
     // giro en grados (-180, 180]: positivo a la derecha, negativo a la izquierda
