@@ -138,12 +138,12 @@ class TestCppCLI(unittest.TestCase):
         ]
         for args, mensaje in casos:
             result = self.ejecutar_cli(["--grafo", GRAFO_PATH, "--sin-cache"] + args)
-            self.assertEqual(result.returncode, 1, args)
+            self.assertEqual(result.returncode, 2, args)  # Entrada inválida
             self.assertIn(mensaje, result.stderr.lower())
 
     def test_grafo_inexistente(self):
         result = self.ejecutar_cli(["--grafo", "no_existe.bin", "--puntos", JSON_STRING, "--sin-cache"])
-        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.returncode, 3)  # Grafo inválido
         self.assertIn("no existe", result.stderr.lower())
 
 
@@ -274,7 +274,7 @@ class TestRobustez(unittest.TestCase):
     def test_puntos_por_stdin_invalidos(self):
         result = self.correr(SCRIPT_PATH, ["--grafo", GRAFO_PATH, "--sin-cache", "--puntos", "-"],
                              entrada="esto no es json")
-        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.returncode, 2)
         self.assertIn("error al interpretar puntos", result.stderr.lower())
 
 
@@ -339,7 +339,7 @@ class TestFormatosGrafo(unittest.TestCase):
             with open(ruta, "wb") as f:
                 f.write(contenido)
             r = self.calcular(ruta)
-            self.assertEqual(r.returncode, 1, nombre)
+            self.assertEqual(r.returncode, 3, nombre)  # Grafo inválido
             self.assertIn("formato no valido", r.stderr, nombre)
 
 
@@ -421,6 +421,146 @@ class TestAlgoritmo(unittest.TestCase):
                                                 "Gira bruscamente a la izquierda"})
             self.assertAlmostEqual(sum(i["distancia_m"] for i in ins), r["resultado"]["distancia_total_m"],
                                    delta=0.05 * len(ins) + 0.1)
+
+
+class TestErrores(unittest.TestCase):
+    """Códigos de salida por tipo de error y campo "codigo" en el modo servidor."""
+
+    def correr(self, args, entrada=None):
+        return subprocess.run([SCRIPT_PATH] + args, input=entrada, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, text=True, encoding="utf-8")
+
+    def test_codigos_de_salida(self):
+        casos = [
+            (["--opcion-que-no-existe"], 2),
+            (["--grafo"], 2),
+            (["--array", "29.06", "abc"], 2),
+            (["--optimizar", "--regresar", "--fijar-final", "--puntos", JSON_STRING], 2),
+            (["--grafo", "no_existe.bin", "--puntos", JSON_STRING], 3),
+        ]
+        for args, codigo in casos:
+            r = self.correr(["--sin-cache"] + args)
+            self.assertEqual(r.returncode, codigo, f"{args}: {r.stderr}")
+            self.assertTrue(r.stderr.startswith("Error: "), r.stderr)
+
+    def test_codigos_en_modo_servidor(self):
+        lineas = [
+            "no es json",
+            json.dumps({"id": 1, "puntos": []}),
+            json.dumps({"id": 2, "puntos": TEST_PUNTOS, "regresar": True, "fijar_final": True}),
+            json.dumps({"id": 3, "puntos": TEST_PUNTOS}),
+        ]
+        r = self.correr(["--serve", "--sin-cache", "--grafo", GRAFO_PATH], "\n".join(lineas) + "\n")
+        respuestas = [json.loads(l) for l in r.stdout.splitlines()]
+        self.assertEqual([x.get("codigo") for x in respuestas], ["ENTRADA_INVALIDA"] * 3 + [None])
+        self.assertTrue(respuestas[3]["ok"])
+
+    def test_sin_ruta_tiene_su_propio_codigo(self):
+        # Grafo con dos componentes desconectadas: no hay camino entre ellas
+        g = formato_rco.Grafo(osm_ids=[1, 2, 3, 4],
+                              coords=[(29.0, -110.0), (29.0, -110.001), (29.1, -110.0), (29.1, -110.001)],
+                              adyacencia=[[(1, 97.0, "A")], [(0, 97.0, "A")], [(3, 97.0, "B")], [(2, 97.0, "B")]])
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = os.path.join(tmp, "islas.bin")
+            formato_rco.escribir_rco2(ruta, g)
+            r = self.correr(["--grafo", ruta, "--sin-cache", "--puntos", "[[29.0, -110.0], [29.1, -110.0]]"])
+            self.assertEqual(r.returncode, 4, r.stderr)
+            self.assertIn("No se encontro ruta", r.stderr)
+
+
+class TestOptimizacion(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.coords, _ = leer_grafo_bin(GRAFO_PATH)
+
+    def puntos_al_azar(self, n, semilla):
+        import random
+        rnd = random.Random(semilla)
+        # Paradas dentro de Mazatán (la zona con más calles del grafo)
+        cercanos = [c for c in self.coords if abs(c[0] - 29.0) < 0.01 and abs(c[1] + 110.14) < 0.01]
+        return [list(rnd.choice(cercanos)) for _ in range(n)]
+
+    def peticiones(self, peticiones):
+        return servir_muchas_con_opciones(peticiones)
+
+    def test_orden_valido_y_nunca_peor(self):
+        for semilla, n in [(1, 6), (2, 12), (3, 25)]:
+            puntos = self.puntos_al_azar(n, semilla)
+            r = self.peticiones([{"puntos": puntos}, {"puntos": puntos, "optimizar": True}])
+            original, optimizada = r[0]["resultado"], r[1]["resultado"]
+            orden = optimizada["orden"]
+            self.assertEqual(orden[0], 0)                       # Empieza en la primera parada
+            self.assertEqual(sorted(orden), list(range(n)))    # Visita todas exactamente una vez
+            self.assertEqual(optimizada["puntos_gps"], [puntos[i] for i in orden])
+            self.assertLessEqual(optimizada["distancia_total_m"], original["distancia_total_m"] + 1.0)
+            self.assertEqual(optimizada["optimizacion"]["metodo"], "exacto" if n - 1 <= 8 else "heuristico")
+
+    def test_no_empeora_una_ruta_ya_ordenada(self):
+        # La ruta municipal de prueba ya viene en un buen orden: la heurística no debe alargarla
+        with open(PUNTOS_MUNICIPIO, encoding="utf-8") as f:
+            puntos = json.load(f)
+        for opciones in ({}, {"regresar": True}, {"fijar_final": True}):
+            r = self.peticiones([{"puntos": puntos, "optimizar": True, **opciones}])[0]["resultado"]["optimizacion"]
+            self.assertLessEqual(r["distancia_optimizada_m"], r["distancia_original_m"], opciones)
+
+    def test_exacto_coincide_con_fuerza_bruta(self):
+        import itertools
+        puntos = self.puntos_al_azar(6, 9)
+        permutaciones = [[0] + list(p) for p in itertools.permutations(range(1, 6))]
+        peticiones = [{"puntos": [puntos[i] for i in orden]} for orden in permutaciones]
+        peticiones.append({"puntos": puntos, "optimizar": True})
+        r = self.peticiones(peticiones)
+        mejor = min(x["resultado"]["distancia_total_m"] for x in r[:-1])
+        self.assertAlmostEqual(r[-1]["resultado"]["distancia_total_m"], mejor, delta=1.0)
+
+    def test_regresar_y_fijar_final(self):
+        puntos = self.puntos_al_azar(10, 4)
+        r = self.peticiones([
+            {"puntos": puntos, "optimizar": True, "regresar": True},
+            {"puntos": puntos, "optimizar": True, "fijar_final": True},
+            {"puntos": puntos, "regresar": True},
+        ])
+        regresar, fijar, solo_regresar = (x["resultado"] for x in r)
+        self.assertEqual(regresar["orden"][0], 0)
+        self.assertEqual(regresar["orden"][-1], 0)
+        self.assertEqual(len(regresar["orden"]), 11)
+        self.assertEqual(fijar["orden"][0], 0)
+        self.assertEqual(fijar["orden"][-1], 9)
+        self.assertEqual(solo_regresar["orden"], list(range(10)) + [0])  # Sin optimizar: mismo orden y vuelta
+        self.assertNotIn("optimizacion", solo_regresar)
+
+    def test_heuristico_mejora_mucho_un_orden_al_azar(self):
+        puntos = self.puntos_al_azar(40, 5)
+        r = self.peticiones([{"puntos": puntos, "optimizar": True}])[0]["resultado"]["optimizacion"]
+        self.assertLess(r["distancia_optimizada_m"], 0.6 * r["distancia_original_m"])
+
+
+def servir_muchas_con_opciones(peticiones):
+    lineas = "\n".join(json.dumps({"id": i, **p}) for i, p in enumerate(peticiones))
+    r = subprocess.run([SCRIPT_PATH, "--serve", "--sin-cache", "--grafo", GRAFO_PATH], input=lineas + "\n",
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+    respuestas = sorted(map(json.loads, r.stdout.splitlines()), key=lambda x: x["id"])
+    for x in respuestas:
+        assert x["ok"], x
+    return respuestas
+
+
+class TestRendimiento(unittest.TestCase):
+    """Detecta regresiones graves (p. ej. un A* que se vuelva lineal). Los márgenes son ~50-100 veces
+    los tiempos medidos, porque los equipos de CI son lentos y variables."""
+
+    def test_carga_y_rutas_en_modo_servidor(self):
+        import time
+        with open(PUNTOS_MUNICIPIO, encoding="utf-8") as f:
+            puntos = json.load(f)
+        lineas = "\n".join(json.dumps({"id": i, "puntos": puntos}) for i in range(50)) + "\n"
+        inicio = time.perf_counter()
+        r = subprocess.run([SCRIPT_PATH, "--serve", "--sin-cache", "--grafo", GRAFO_PATH], input=lineas,
+                           stdout=subprocess.PIPE, text=True, encoding="utf-8")
+        total = time.perf_counter() - inicio
+        self.assertEqual(len(r.stdout.splitlines()), 50)
+        # Hoy: ~40 ms (arranque + carga + 50 rutas de 23 paradas)
+        self.assertLess(total, 4.0, f"50 rutas tardaron {total:.2f} s")
 
 
 class TestParidadPython(unittest.TestCase):

@@ -26,10 +26,12 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
    - Algoritmo A\* con heurística euclidiana plana en memoria contigua.
    - Generador de maniobras giro a giro (*turn-by-turn*) y consolidación.
    - Compilación con CMake o `build.bat` (binario estático).
-   - Referencia completa de la CLI, incluido el modo servidor (`--serve`).
+   - Referencia completa de la CLI, modo servidor (`--serve`) y códigos de error.
+   - Optimización del orden de las paradas (exacto y heurístico).
 
 4. [📦 Integración TypeScript y Electron (`ruta-craft-osm`)](./4_INTEGRACION_TYPESCRIPT_ELECTRON.md)
    - `calcularRuta()` (un proceso por llamada) y motor persistente `crearMotorRutas()`.
+   - Optimización del orden de las paradas y errores tipados (`ErrorRutaCraft`).
    - Detección automática de empaquetado Electron (`app.asar.unpacked`).
    - Interfaces y tipos de TypeScript.
    - Instalación local (`npm link` o `npm pack`) y ejemplos de uso en Electron.
@@ -37,7 +39,7 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
 5. [⏱️ Rendimiento del Motor C++](./5_RENDIMIENTO.md)
    - Tiempos medidos de carga, KD-Tree, A\* y ruta completa (generados con `bench/correr_benchmark.py`).
    - Escalamiento del grafo rural de producción a la ciudad de Hermosillo.
-   - Calidad de las instrucciones e impacto de las calles de un solo sentido.
+   - Calidad de las instrucciones, ahorro al optimizar el orden e impacto de las calles de un solo sentido.
 
 6. [🗺️ Visualizador y Comparador Web Interactivo](./visualizacion_ruta.html)
    - Herramienta visual basada en Leaflet con las rutas de los escenarios del benchmark (Mazatán y Hermosillo).

@@ -71,14 +71,14 @@ GRAFOS = [
 ZONAS = {"mazatan": "Mazatán - Villa Pesqueira", "hermosillo": "Ciudad de Hermosillo"}
 
 
-def ejecutar_cli(grafo, puntos, repeticiones=5):
+def ejecutar_cli(grafo, puntos, repeticiones=5, extra=()):
     """Mide una llamada de calcularRuta() (arrancar cli.exe, cargar el grafo y calcular) y devuelve
     (mediana en ms, resultado de la ruta)."""
     tiempos = []
     resultado = None
     for _ in range(repeticiones):
         t0 = time.perf_counter()
-        r = subprocess.run([CLI, "--grafo", grafo, "--puntos", json.dumps(puntos), "--sin-cache"],
+        r = subprocess.run([CLI, "--grafo", grafo, "--puntos", "-", "--sin-cache", *extra], input=json.dumps(puntos),
                            capture_output=True, text=True, encoding="utf-8")
         tiempos.append((time.perf_counter() - t0) * 1000)
         if r.returncode != 0:
@@ -129,6 +129,14 @@ def main():
             esc["proceso_cli_ms"], ruta = ejecutar_cli(grafo, definicion["puntos"])
             if not ruta:
                 continue
+            if len(definicion["puntos"]) >= 10:
+                ms_opt, opt = ejecutar_cli(grafo, definicion["puntos"], repeticiones=3, extra=["--optimizar"])
+                if opt:
+                    esc["optimizado"] = {
+                        "proceso_cli_ms": ms_opt,
+                        "distancia_km": opt["distancia_total_km"],
+                        "metodo": opt["optimizacion"]["metodo"],
+                    }
             entrada = rutas.setdefault((clave, idx), {
                 "id": f"{clave}-{idx}",
                 "zona": ZONAS[clave],
@@ -260,6 +268,27 @@ def generar_markdown(meta, resultados):
         l += ejemplo["instrucciones"]["muestra"]
         l.append("```")
 
+    filas_opt = [(d, e) for d in resultados for e in d["escenarios"] if "optimizado" in e]
+    if filas_opt:
+        l += [
+            "",
+            "---",
+            "",
+            "## 4. Optimización del orden de las paradas",
+            "",
+            "Las mismas paradas, en el orden recibido y con `--optimizar` (`optimizar: true` en el wrapper). "
+            "La primera parada se mantiene como inicio. El tiempo es el de `calcularRuta()` completo, "
+            "incluida la matriz de distancias por la red entre todas las paradas.",
+            "",
+            "| Grafo | Escenario | Paradas | Orden recibido | Optimizado | Ahorro | Método | calcularRuta() |",
+            "| :--- | :--- | ---: | ---: | ---: | ---: | :--- | ---: |",
+        ]
+        for d, e in filas_opt:
+            o = e["optimizado"]
+            ahorro = 100 * (e["distancia_km"] - o["distancia_km"]) / e["distancia_km"]
+            l.append(f"| {d['etiqueta']} | {e['nombre']} | {e['puntos']} | {e['distancia_km']} km | "
+                     f"**{o['distancia_km']} km** | {ahorro:.0f}% | {o['metodo']} | {o['proceso_cli_ms']} ms |")
+
     por_etiqueta = {d["etiqueta"]: d for d in resultados}
     base = por_etiqueta.get("Ciudad de Hermosillo")
     dirigido = por_etiqueta.get("Ciudad de Hermosillo (respetando sentidos)")
@@ -268,7 +297,7 @@ def generar_markdown(meta, resultados):
             "",
             "---",
             "",
-            "## 4. Calles de un solo sentido",
+            "## 5. Calles de un solo sentido",
             "",
             "El grafo de producción agrega cada arista también en sentido contrario, por lo que el motor puede "
             "trazar rutas en contrasentido. Comparación en Hermosillo con un grafo que respeta los sentidos "

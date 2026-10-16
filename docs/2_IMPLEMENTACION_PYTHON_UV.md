@@ -85,7 +85,7 @@ El motor C++ sigue aceptando `RCO1`, pero `RCO2` ocupa un tercio del espacio y c
 | `False` (por defecto) | Cada arista se agrega también en sentido contrario: el motor **ignora** las calles de un solo sentido. | Grafo de producción actual (`grafo_mazatan_villapesqueira.bin`). |
 | `True` | Solo las aristas que trae OSMnx, que ya incluye ambos sentidos en las calles de doble sentido. | Rutas que respetan los sentidos; archivo ~40% más chico y carga más rápida. |
 
-En Hermosillo, el 17.7% de las aristas son de un solo sentido y respetarlas alarga las rutas entre 1% y 12%. Ver la comparación completa en [5. Rendimiento](./5_RENDIMIENTO.md#4-calles-de-un-solo-sentido).
+En Hermosillo, el 17.7% de las aristas son de un solo sentido y respetarlas alarga las rutas entre 1% y 12%. Ver la comparación completa en [5. Rendimiento](./5_RENDIMIENTO.md#5-calles-de-un-solo-sentido).
 
 ---
 

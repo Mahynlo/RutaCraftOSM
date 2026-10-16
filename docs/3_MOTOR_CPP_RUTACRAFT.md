@@ -13,12 +13,14 @@ RutaCraftOSM_c/include/
 ├── types.hpp           # Coordenada, Grafo (formato CSR) e Instruccion
 ├── geo_utils.hpp       # Fórmulas geométricas (Haversine, distancias planas y rumbos)
 ├── kdtree.hpp          # Índice espacial KD-Tree 2D para snapping ultra rápido
-├── astar.hpp           # Algoritmo A* en memoria contigua
+├── astar.hpp           # A* (ruta entre dos nodos) y Dijkstra de uno a varios (matriz de distancias)
+├── optimizar.hpp       # Optimización del orden de las paradas (exacto o 2-opt + Or-opt)
+├── errores.hpp         # Tipos de error y códigos de salida
 ├── instrucciones.hpp   # Generador de maniobras giro a giro y consolidación
 ├── grafo.hpp           # Cargador de grafos RCO2, RCO1 (compatibilidad) y JSON
 ├── archivos.hpp        # Rutas UTF-8, argumentos Unicode y ubicación del ejecutable por sistema operativo
 ├── cache.hpp           # Gestor de caché de rutas con persistencia JSON
-├── ruta.hpp            # calcular_ruta(): snapping + A* por tramo + instrucciones (usado por la CLI y el benchmark)
+├── ruta.hpp            # calcular_ruta(): snapping + orden + A* por tramo + instrucciones (CLI y benchmark)
 └── json.hpp            # Parser y serializador JSON (nlohmann/json)
 ```
 
@@ -162,10 +164,54 @@ $grafo = "..\RutaCraftOSM\grafos\grafo_mazatan_villapesqueira.bin"
 | `--cache <archivo>` | Archivo de caché de tramos a leer y guardar. Por defecto `cache_rutas.json` en el directorio actual. |
 | `--no-save-cache` | Lee el caché pero no lo guarda. |
 | `--sin-cache` | No lee ni escribe ningún archivo de caché. |
-| `--serve` | Modo servidor: carga el grafo una vez y atiende peticiones `{"id", "puntos"}` por stdin; responde `{"id", "ok", "resultado"}` o `{"id", "ok": false, "error"}`. El caché se guarda al cerrarse stdin. |
+| `--optimizar` | Reordena las paradas para minimizar la distancia (la primera es el inicio). Ver la sección 8. |
+| `--regresar` | Termina la ruta en el punto de inicio (con o sin `--optimizar`). |
+| `--fijar-final` | Con `--optimizar`, mantiene la última parada al final. No se combina con `--regresar`. |
+| `--serve` | Modo servidor: carga el grafo una vez y atiende peticiones JSON por stdin, una por línea (ver abajo). El caché se guarda al cerrarse stdin. |
+
+Cualquier otra opción es un error (código 2), para que una opción mal escrita no pase inadvertida.
+
+**Protocolo del modo servidor** (una línea JSON por petición y por respuesta):
+
+```text
+→ {"id": 1, "puntos": [[lat, lon], ...], "optimizar": false, "regresar": false, "fijar_final": false}
+← {"id": 1, "ok": true, "resultado": {...}}
+← {"id": 1, "ok": false, "codigo": "SIN_RUTA", "error": "No se encontro ruta entre ..."}
+```
+
+Un error en una petición no detiene el servidor; las demás se siguen atendiendo.
 
 **Rutas de archivo**: se aceptan rutas con acentos y caracteres no ASCII en todas las opciones (por ejemplo `C:\Users\José Muñoz\...`). En Windows los argumentos se leen en Unicode (`GetCommandLineW`) y se manejan internamente en UTF-8.
 
 **Caché**: cada tramo guardado se valida contra el grafo cargado (nodos existentes y conectados, extremos correctos). Si el grafo se regeneró y un tramo ya no es válido, se descarta, se recalcula y se corrige en el archivo.
 
-**Códigos de salida**: `0` si la ruta se calculó; `1` ante entradas inválidas, grafo inexistente o un tramo sin ruta posible. El detalle del error se escribe en stderr con el prefijo `Error(py):`.
+**Códigos de salida** (el detalle se escribe en stderr como `Error: ...`; en el modo servidor va en el campo `codigo`):
+
+| Código | `codigo` en `--serve` | Cuándo |
+| :---: | :--- | :--- |
+| 0 | — | La ruta se calculó |
+| 1 | `INTERNO` | Error inesperado |
+| 2 | `ENTRADA_INVALIDA` | Opción desconocida o sin valor, puntos inválidos, opciones incompatibles |
+| 3 | `GRAFO_INVALIDO` | El grafo no existe o el archivo es inválido (truncado, corrupto) |
+| 4 | `SIN_RUTA` | Algún tramo entre paradas no tiene camino posible |
+
+---
+
+## 8. Optimización del Orden de las Paradas
+
+Con `--optimizar` el motor elige en qué orden visitar las paradas para recorrer la menor distancia. En [`optimizar.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/optimizar.hpp):
+
+1. **Matriz de distancias por la red**: un Dijkstra desde cada parada que se detiene al alcanzar todas las demás. Son distancias reales por calle (no en línea recta) y, en un grafo que respeta sentidos, pueden ser asimétricas (A→B ≠ B→A).
+2. **Búsqueda del orden**, con la primera parada fija como inicio:
+   * Hasta **8 paradas libres**: se prueban todas las permutaciones (8! = 40,320) y el resultado es el **óptimo exacto**.
+   * Más paradas: **vecino más cercano** como solución inicial y mejoras locales **2-opt** (invertir un tramo) y **Or-opt** (mover una parada), con el cambio de costo calculado en O(1) mediante sumas acumuladas en ambos sentidos. La mejora se aplica también al orden recibido y se elige el mejor resultado, así que nunca empeora una ruta que ya venía bien ordenada.
+3. **Modos**: abierto (termina en cualquier parada), `--regresar` (vuelve al inicio) o `--fijar-final` (la última parada queda al final).
+
+El resultado agrega dos campos:
+
+```json
+"orden": [0, 8, 7, 14, 2, ...],
+"optimizacion": {"distancia_original_m": 32019.0, "distancia_optimizada_m": 10721.3, "metodo": "heuristico"}
+```
+
+`puntos_gps` queda en el orden de visita y `orden[i]` es el índice en la entrada de `puntos_gps[i]`. Con `--regresar` el último elemento de `orden` es `0`. En los escenarios del benchmark, rutas de 25 y 50 paradas desordenadas bajan entre 63% y 74% ([5. Rendimiento](./5_RENDIMIENTO.md#4-optimización-del-orden-de-las-paradas)).

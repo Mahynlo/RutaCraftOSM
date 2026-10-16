@@ -2,7 +2,17 @@ import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
-export interface CalcularRutaOptions {
+/** Opciones de orden de las paradas (las acepta calcularRuta() y motor.calcular()). */
+export interface OpcionesOrden {
+    /** Reordenar las paradas para minimizar la distancia. La primera parada siempre es el inicio. */
+    optimizar?: boolean;
+    /** Terminar la ruta en el punto de inicio (con o sin optimizar). */
+    regresarAlInicio?: boolean;
+    /** Al optimizar, mantener la última parada al final. No se combina con regresarAlInicio. */
+    fijarFinal?: boolean;
+}
+
+export interface CalcularRutaOptions extends OpcionesOrden {
     puntos: [number, number][];
     grafo?: string;
     cachePath?: string;       // Archivo de caché a leer/guardar (usará --cache). Sin él no se toca ningún archivo de caché.
@@ -25,18 +35,55 @@ export interface InstruccionNavegacion {
     distancia_m: number;
 }
 
+export interface ResultadoOptimizacion {
+    /** Distancia por la red en el orden recibido (metros). */
+    distancia_original_m: number;
+    /** Distancia por la red en el orden calculado (metros). */
+    distancia_optimizada_m: number;
+    /** "exacto" (hasta 8 paradas libres, se prueban todas las permutaciones) o "heuristico". */
+    metodo: "exacto" | "heuristico";
+}
+
 export interface ResultadoRuta {
+    /** Paradas en orden de visita (si se optimizó o se regresa al inicio, difiere de la entrada). */
     puntos_gps: [number, number][];
     ruta: [number, number][];
     distancia_total_m: number;
     distancia_total_km: number;
     instrucciones: InstruccionNavegacion[];
+    /** Índice en la entrada de cada elemento de puntos_gps (solo con optimizar o regresarAlInicio). */
+    orden?: number[];
+    optimizacion?: ResultadoOptimizacion;
 }
 
 export interface RespuestaRutaCompleta {
     resultado: ResultadoRuta;
     cache?: Record<string, string[]>;
 }
+
+/** Tipo de error, estable para que la aplicación decida qué mostrar al usuario. */
+export type CodigoErrorRuta =
+    | "ENTRADA_INVALIDA"          // Puntos u opciones inválidos
+    | "GRAFO_INVALIDO"            // El grafo no existe o el archivo es inválido
+    | "SIN_RUTA"                  // Algún tramo no tiene camino posible
+    | "TIMEOUT"                   // Se superó timeoutMs
+    | "PLATAFORMA_NO_SOPORTADA"   // El paquete no incluye el motor para este sistema
+    | "MOTOR_NO_DISPONIBLE"       // No se pudo ejecutar el motor, o terminó inesperadamente
+    | "INTERNO";                  // Error inesperado del motor
+
+export class ErrorRutaCraft extends Error {
+    constructor(public readonly codigo: CodigoErrorRuta, mensaje: string) {
+        super(`❌ ${mensaje}`);
+        this.name = "ErrorRutaCraft";
+    }
+}
+
+// Código de salida de la CLI -> tipo de error (ver RutaCraftOSM_c/include/errores.hpp)
+const CODIGOS_SALIDA: Record<number, CodigoErrorRuta> = {
+    2: "ENTRADA_INVALIDA",
+    3: "GRAFO_INVALIDO",
+    4: "SIN_RUTA",
+};
 
 const TIMEOUT_DEFAULT_MS = 30000;
 
@@ -66,8 +113,8 @@ function getCliExePath(): string {
     if (binariosVerificados.has(ruta)) return ruta;
 
     if (!fs.existsSync(ruta)) {
-        throw new Error(
-            `❌ ruta-craft-osm no incluye el motor para ${plataforma} (incluidas: ${PLATAFORMAS_SOPORTADAS.join(", ")}). ` +
+        throw new ErrorRutaCraft("PLATAFORMA_NO_SOPORTADA",
+            `ruta-craft-osm no incluye el motor para ${plataforma} (incluidas: ${PLATAFORMAS_SOPORTADAS.join(", ")}). ` +
             `Compílalo con CMake (RutaCraftOSM_c) y cópialo a bin/${plataforma}/`);
     }
     // Algunos empaquetados (zip, artefactos de CI) pierden el permiso de ejecución en Linux/macOS
@@ -82,18 +129,21 @@ function getCliExePath(): string {
     return ruta;
 }
 
-function validarPuntos(puntos: unknown): string | null {
+function validarEntrada(puntos: unknown, orden: OpcionesOrden = {}): ErrorRutaCraft | null {
     if (!Array.isArray(puntos) || puntos.length === 0) {
-        return "❌ Debes proporcionar 'puntos' como un array de coordenadas [lat, lon]";
+        return new ErrorRutaCraft("ENTRADA_INVALIDA", "Debes proporcionar 'puntos' como un array de coordenadas [lat, lon]");
     }
     for (let i = 0; i < puntos.length; i++) {
         const p = puntos[i];
         if (!Array.isArray(p) || p.length !== 2 || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
-            return `❌ El punto ${i} no es un par [lat, lon] numérico válido`;
+            return new ErrorRutaCraft("ENTRADA_INVALIDA", `El punto ${i} no es un par [lat, lon] numérico válido`);
         }
         if (Math.abs(p[0]) > 90 || Math.abs(p[1]) > 180) {
-            return `❌ El punto ${i} está fuera de rango: [${p[0]}, ${p[1]}]`;
+            return new ErrorRutaCraft("ENTRADA_INVALIDA", `El punto ${i} está fuera de rango: [${p[0]}, ${p[1]}]`);
         }
+    }
+    if (orden.regresarAlInicio && orden.fijarFinal) {
+        return new ErrorRutaCraft("ENTRADA_INVALIDA", "Las opciones regresarAlInicio y fijarFinal no se pueden combinar");
     }
     return null;
 }
@@ -117,9 +167,9 @@ function argsComunes(grafo?: string, cachePath?: string, saveCache?: boolean): s
  * Para varias rutas seguidas es más rápido usar crearMotorRutas().
  */
 export function calcularRuta(options: CalcularRutaOptions): Promise<RespuestaRutaCompleta> {
-    const errorPuntos = validarPuntos(options?.puntos);
-    if (errorPuntos) {
-        return Promise.reject(new Error(errorPuntos));
+    const errorEntrada = validarEntrada(options?.puntos, options);
+    if (errorEntrada) {
+        return Promise.reject(errorEntrada);
     }
 
     let exePath: string;
@@ -131,6 +181,10 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<RespuestaRut
     // Los puntos van por stdin (--puntos -): como argumentos, Windows limita la línea de
     // comandos a ~32 KB y fallaba con más de ~1,300 puntos (spawn ENAMETOOLONG)
     const args: string[] = ["--stdout", ...argsComunes(options.grafo, options.cachePath, options.saveCache), "--puntos", "-"];
+    if (options.optimizar) args.push("--optimizar");
+    if (options.regresarAlInicio) args.push("--regresar");
+    if (options.fijarFinal) args.push("--fijar-final");
+    const timeoutMs = options.timeoutMs ?? TIMEOUT_DEFAULT_MS;
 
     return new Promise((resolve, reject) => {
         const proc = spawn(exePath, args, { windowsHide: true });
@@ -144,8 +198,8 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<RespuestaRut
 
         const timer = setTimeout(() => {
             proc.kill();
-            reject(new Error(`❌ El cálculo de ruta superó ${options.timeoutMs ?? TIMEOUT_DEFAULT_MS} ms`));
-        }, options.timeoutMs ?? TIMEOUT_DEFAULT_MS);
+            reject(new ErrorRutaCraft("TIMEOUT", `El cálculo de ruta superó ${timeoutMs} ms`));
+        }, timeoutMs);
 
         // setEncoding evita partir un carácter UTF-8 (p. ej. "á" en un nombre de calle) entre dos fragmentos
         proc.stdout.setEncoding("utf8");
@@ -153,31 +207,23 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<RespuestaRut
         proc.stdout.on("data", (data: string) => out += data);
         proc.stderr.on("data", (data: string) => err += data);
 
-        proc.on("close", (code: number) => {
+        proc.on("close", (code: number | null) => {
             clearTimeout(timer);
-            if (code === 0) {
-                try {
-                    const jsonStart = out.indexOf("{");
-                    const jsonEnd = out.lastIndexOf("}") + 1;
-
-                    if (jsonStart === -1 || jsonEnd === 0) {
-                        return reject(new Error("❌ No se encontró JSON válido en la salida: " + out));
-                    }
-
-                    const jsonString = out.substring(jsonStart, jsonEnd);
-                    const parsed = JSON.parse(jsonString) as RespuestaRutaCompleta;
-                    resolve(parsed);
-                } catch (e: any) {
-                    reject(new Error("❌ Error al parsear JSON: " + e.message));
-                }
-            } else {
-                reject(new Error("❌ Error en ejecución: " + (err || out)));
+            if (code !== 0) {
+                const mensaje = (err || out).trim().replace(/^Error:\s*/, "");
+                const codigo = code !== null ? CODIGOS_SALIDA[code] : undefined;
+                return reject(new ErrorRutaCraft(codigo ?? "INTERNO", mensaje || `El motor terminó con código ${code}`));
+            }
+            try {
+                resolve(JSON.parse(out) as RespuestaRutaCompleta);
+            } catch (e: any) {
+                reject(new ErrorRutaCraft("INTERNO", "Respuesta del motor no válida: " + e.message));
             }
         });
 
         proc.on("error", (e: Error) => {
             clearTimeout(timer);
-            reject(new Error("❌ Error al ejecutar el binario: " + e.message));
+            reject(new ErrorRutaCraft("MOTOR_NO_DISPONIBLE", "No se pudo ejecutar el motor: " + e.message));
         });
     });
 }
@@ -186,6 +232,14 @@ interface PeticionPendiente {
     resolve: (r: ResultadoRuta) => void;
     reject: (e: Error) => void;
     timer: NodeJS.Timeout;
+}
+
+interface RespuestaServidor {
+    id: number;
+    ok: boolean;
+    resultado?: ResultadoRuta;
+    codigo?: CodigoErrorRuta;
+    error?: string;
 }
 
 /**
@@ -203,10 +257,10 @@ export class MotorRutas {
 
     constructor(private readonly opciones: MotorRutasOptions = {}) {}
 
-    calcular(puntos: [number, number][]): Promise<ResultadoRuta> {
-        const errorPuntos = validarPuntos(puntos);
-        if (errorPuntos) {
-            return Promise.reject(new Error(errorPuntos));
+    calcular(puntos: [number, number][], orden: OpcionesOrden = {}): Promise<ResultadoRuta> {
+        const errorEntrada = validarEntrada(puntos, orden);
+        if (errorEntrada) {
+            return Promise.reject(errorEntrada);
         }
 
         let proc: ChildProcessWithoutNullStreams;
@@ -221,11 +275,17 @@ export class MotorRutas {
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
                 this.pendientes.delete(id);
-                reject(new Error(`❌ El cálculo de ruta superó ${timeoutMs} ms`));
+                reject(new ErrorRutaCraft("TIMEOUT", `El cálculo de ruta superó ${timeoutMs} ms`));
             }, timeoutMs);
 
             this.pendientes.set(id, { resolve, reject, timer });
-            proc.stdin.write(JSON.stringify({ id, puntos }) + "\n");
+            proc.stdin.write(JSON.stringify({
+                id,
+                puntos,
+                optimizar: orden.optimizar === true,
+                regresar: orden.regresarAlInicio === true,
+                fijar_final: orden.fijarFinal === true,
+            }) + "\n");
         });
     }
 
@@ -261,9 +321,12 @@ export class MotorRutas {
         proc.stderr.setEncoding("utf8");
         proc.stderr.on("data", (chunk: string) => this.bufferError += chunk);
 
-        proc.on("error", (e: Error) => this.terminar(proc, "❌ Error al ejecutar el binario: " + e.message));
+        proc.on("error", (e: Error) => this.terminar(proc, new ErrorRutaCraft(
+            "MOTOR_NO_DISPONIBLE", "No se pudo ejecutar el motor: " + e.message)));
         proc.on("exit", (code) => {
-            this.terminar(proc, "❌ El motor de rutas terminó (código " + code + "): " + this.bufferError.trim());
+            const detalle = this.bufferError.trim().replace(/^Error:\s*/, "");
+            const tipo = (code !== null && CODIGOS_SALIDA[code]) || "MOTOR_NO_DISPONIBLE";
+            this.terminar(proc, new ErrorRutaCraft(tipo, `El motor de rutas terminó (código ${code}): ${detalle}`));
         });
 
         process.once("exit", this.matarAlSalir);
@@ -278,7 +341,7 @@ export class MotorRutas {
             this.bufferSalida = this.bufferSalida.slice(salto + 1);
             if (!linea) continue;
 
-            let respuesta: { id: number; ok: boolean; resultado?: ResultadoRuta; error?: string };
+            let respuesta: RespuestaServidor;
             try {
                 respuesta = JSON.parse(linea);
             } catch {
@@ -293,20 +356,20 @@ export class MotorRutas {
             if (respuesta.ok && respuesta.resultado) {
                 pendiente.resolve(respuesta.resultado);
             } else {
-                pendiente.reject(new Error("❌ Error en ejecución: " + (respuesta.error ?? "respuesta inválida")));
+                pendiente.reject(new ErrorRutaCraft(respuesta.codigo ?? "INTERNO", respuesta.error ?? "Respuesta inválida del motor"));
             }
         }
     }
 
     // Rechaza todo lo pendiente y deja el motor listo para reiniciarse en la siguiente llamada
-    private terminar(proc: ChildProcessWithoutNullStreams, mensaje: string): void {
+    private terminar(proc: ChildProcessWithoutNullStreams, error: ErrorRutaCraft): void {
         if (this.proc !== proc) return;
         this.proc = null;
         process.removeListener("exit", this.matarAlSalir);
 
         for (const pendiente of this.pendientes.values()) {
             clearTimeout(pendiente.timer);
-            pendiente.reject(new Error(mensaje));
+            pendiente.reject(error);
         }
         this.pendientes.clear();
     }

@@ -75,6 +75,58 @@ public:
         return {};  // No se encontró camino
     }
 
+    // Dijkstra de un origen a varios objetivos: distancia por la red (metros) a cada objetivo, o
+    // infinito si no hay camino. Se detiene en cuanto alcanza todos los objetivos.
+    static std::vector<float> distancias(const Grafo& grafo, int origen, const std::vector<int>& objetivos) {
+        const float INF = std::numeric_limits<float>::infinity();
+        const size_t n = grafo.num_nodos();
+        std::vector<float> resultado(objetivos.size(), INF);
+        if (origen < 0 || static_cast<size_t>(origen) >= n) return resultado;
+
+        std::vector<int> pendientes(objetivos);
+        std::sort(pendientes.begin(), pendientes.end());
+        pendientes.erase(std::unique(pendientes.begin(), pendientes.end()), pendientes.end());
+        size_t faltan = pendientes.size();
+
+        EspacioTrabajo& w = espacio(n);
+        const uint32_t gen = w.nueva_busqueda();
+        auto& cola = w.cola;
+        cola.clear();
+        const auto mayor = std::greater<ElementoPQ>();
+
+        w.marca[origen] = gen;
+        w.g[origen] = 0.0f;
+        cola.push_back({0.0f, origen});
+
+        while (!cola.empty() && faltan > 0) {
+            std::pop_heap(cola.begin(), cola.end(), mayor);
+            const int actual = cola.back().second;
+            cola.pop_back();
+            if (w.cerrado[actual] == gen) continue;
+            w.cerrado[actual] = gen;
+            if (std::binary_search(pendientes.begin(), pendientes.end(), actual)) --faltan;
+
+            const float g_actual = w.g[actual];
+            for (uint32_t e = grafo.inicio_aristas[actual]; e < grafo.inicio_aristas[actual + 1]; ++e) {
+                const int vecino = static_cast<int>(grafo.destino[e]);
+                if (w.cerrado[vecino] == gen) continue;
+                const float tentativo = g_actual + grafo.peso[e];
+                if (w.marca[vecino] != gen || tentativo < w.g[vecino]) {
+                    w.marca[vecino] = gen;
+                    w.g[vecino] = tentativo;
+                    cola.push_back({tentativo, vecino});
+                    std::push_heap(cola.begin(), cola.end(), mayor);
+                }
+            }
+        }
+
+        for (size_t k = 0; k < objetivos.size(); ++k) {
+            const int t = objetivos[k];
+            if (t >= 0 && static_cast<size_t>(t) < n && w.cerrado[t] == gen) resultado[k] = w.g[t];
+        }
+        return resultado;
+    }
+
 private:
     typedef std::pair<float, int> ElementoPQ;  // (f, nodo)
 

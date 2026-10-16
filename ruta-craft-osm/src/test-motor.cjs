@@ -163,6 +163,47 @@ test("en una plataforma sin motor compilado el error lo explica", async () => {
     }
 });
 
+test("los errores traen un código estable", async () => {
+    const { ErrorRutaCraft } = require("../dist/index.js");
+    const esperar = async (promesa, codigo) => {
+        await assert.rejects(promesa, (e) => e instanceof ErrorRutaCraft && e.codigo === codigo);
+    };
+    await esperar(calcularRuta({ puntos: [[95, 0]] }), "ENTRADA_INVALIDA");
+    await esperar(calcularRuta({ puntos: TRES_PUNTOS, regresarAlInicio: true, fijarFinal: true }), "ENTRADA_INVALIDA");
+    await esperar(calcularRuta({ puntos: TRES_PUNTOS, grafo: path.join(tmpDir(), "no_existe.bin") }), "GRAFO_INVALIDO");
+    await esperar(calcularRuta({ puntos: TRES_PUNTOS, timeoutMs: 1 }), "TIMEOUT");
+
+    const motor = crearMotorRutas({ grafo: path.join(tmpDir(), "no_existe.bin") });
+    await esperar(motor.calcular(TRES_PUNTOS), "GRAFO_INVALIDO");
+    await motor.cerrar();
+});
+
+test("optimizar el orden de las paradas (calcularRuta y motor persistente)", async () => {
+    // Las paradas en orden alternado obligan a ir y volver; optimizado debe ser más corto
+    const puntos = muchosPuntos(40).filter((_, i) => i % 3 === 0);
+    const desordenados = [puntos[0], ...puntos.slice(1).reverse().filter((_, i) => i % 2 === 0),
+                          ...puntos.slice(1).reverse().filter((_, i) => i % 2 === 1)];
+
+    const original = (await calcularRuta({ puntos: desordenados })).resultado;
+    const optimizada = (await calcularRuta({ puntos: desordenados, optimizar: true })).resultado;
+    assert.ok(optimizada.distancia_total_m < original.distancia_total_m);
+    assert.equal(optimizada.orden[0], 0);
+    assert.deepEqual([...optimizada.orden].sort((a, b) => a - b), desordenados.map((_, i) => i));
+    assert.ok(optimizada.optimizacion.distancia_optimizada_m <= optimizada.optimizacion.distancia_original_m);
+
+    const motor = crearMotorRutas();
+    try {
+        assert.deepEqual(await motor.calcular(desordenados, { optimizar: true }), optimizada);
+        const ida_y_vuelta = await motor.calcular(desordenados, { optimizar: true, regresarAlInicio: true });
+        assert.equal(ida_y_vuelta.orden.at(-1), 0);
+        assert.deepEqual(ida_y_vuelta.puntos_gps.at(-1), desordenados[0]);
+        const sin_opciones = await motor.calcular(desordenados);
+        assert.equal(sin_opciones.orden, undefined);
+    } finally {
+        await motor.cerrar();
+    }
+});
+
 test("el timeout rechaza la petición", async () => {
     const motor = crearMotorRutas({ timeoutMs: 1 });
     try {

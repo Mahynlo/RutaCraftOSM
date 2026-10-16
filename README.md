@@ -7,11 +7,13 @@
 ## ⚡ Características Principales
 
 * 🧭 **Multi-paradas**: Soporta origen, múltiples paradas intermedias y destino.
+* 🔀 **Optimización del orden**: Reordena las paradas para recorrer lo menos posible (óptimo exacto hasta 9 paradas; heurística 2-opt + Or-opt para más). En rutas desordenadas de prueba, entre 63% y 74% menos distancia.
 * ⚡ **Ultra Rápido**: Motor nativo en C++20: una ruta multi-parada tarda **< 1 ms** con el motor persistente y **~50 ms** por llamada con `calcularRuta()` en el grafo de producción ([benchmark](./docs/5_RENDIMIENTO.md)).
 * 🌲 **Snapping $O(\log N)$ con KD-Tree**: Búsqueda del nodo más cercano instantánea sin evaluar linealmente todo el grafo.
 * 📦 **Formato Binario `RCO2`**: Arreglos contiguos que se cargan en **~2 ms** (25 mil nodos) y **~6 ms** (Hermosillo, 75 mil nodos), con 8 y 19 MB de memoria.
 * 🧾 **Instrucciones Tipo GPS (*Turn-by-turn*)**: Maniobras de giro (*"Sigue recto"*, *"Gira a la derecha"*), nombres de calles y consolidación de tramos.
 * 💻 **Multiplataforma**: Binarios para Windows x64, Linux x64 y macOS (Intel y Apple Silicon), compilados y probados en CI.
+* 🚦 **Errores tipados**: Códigos de salida por tipo de error en la CLI y `ErrorRutaCraft.codigo` en el wrapper.
 * 🔌 **Integración Transparente con Electron**: Motor persistente (`crearMotorRutas()`) y detección automática en entornos de producción empaquetados (`app.asar.unpacked`).
 * 🐍 **Gestión Moderna con `uv`**: Extracción y preparación de datos geográficos reproducible y rápida.
 
@@ -111,7 +113,13 @@ const { crearMotorRutas } = require('ruta-craft-osm');
 const motor = crearMotorRutas({ cachePath: path.join(app.getPath('userData'), 'cache_rutas.json') });
 const resultado = await motor.calcular([[29.065639, -110.056448], [29.059486, -110.053973]]);
 app.on('before-quit', () => motor.cerrar());
+
+// Optimizar el orden de las paradas y volver al inicio
+const optimizada = await motor.calcular(paradas, { optimizar: true, regresarAlInicio: true });
+console.log(optimizada.orden, optimizada.optimizacion);
 ```
+
+El paquete tiene su propio [README](./ruta-craft-osm/README.md) y un [CHANGELOG](./ruta-craft-osm/CHANGELOG.md) por versión.
 
 ---
 

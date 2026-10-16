@@ -84,9 +84,16 @@ La constante `GRAFO_INCLUIDO` contiene la ruta absoluta del grafo del paquete, q
 ## 3. Tipos e Interfaces de TypeScript
 
 ```typescript
-export interface CalcularRutaOptions {
+/** Opciones de orden de las paradas (calcularRuta() y motor.calcular()) */
+export interface OpcionesOrden {
+    optimizar?: boolean;        // Reordenar para minimizar la distancia (la primera parada es el inicio)
+    regresarAlInicio?: boolean; // Terminar en el punto de inicio
+    fijarFinal?: boolean;       // Al optimizar, mantener la última parada al final
+}
+
+export interface CalcularRutaOptions extends OpcionesOrden {
     puntos: [number, number][]; // Array de coordenadas [latitud, longitud]
-    grafo?: string;             // Ruta al archivo de grafo .bin o .json
+    grafo?: string;             // Grafo .bin propio (por defecto GRAFO_INCLUIDO)
     cachePath?: string;         // Archivo de caché a leer/guardar. Sin él no se toca ningún archivo de caché
     saveCache?: boolean;        // Si es false, no guarda el caché en disco
     timeoutMs?: number;         // Tiempo máximo de ejecución (default: 30000)
@@ -100,24 +107,62 @@ export interface MotorRutasOptions {
 }
 
 export interface InstruccionNavegacion {
-    accion: string;             // "Sigue recto", "Gira a la derecha", etc.
-    calle: string;              // Nombre de la calle de OSM
+    accion: string;             // "Sigue recto", "Gira a la derecha", "Da vuelta en U", etc.
+    calle: string;              // Nombre de la calle de OSM ("desconocida" si no tiene)
     desde: [number, number];    // Coordenada inicial del tramo
     hacia: [number, number];    // Coordenada final del tramo
     distancia_m: number;        // Distancia del tramo en metros
 }
 
 export interface ResultadoRuta {
-    puntos_gps: [number, number][];
-    ruta: [number, number][];   // Polilínea completa de la ruta
-    distancia_total_m: number;  // Distancia acumulada en metros
-    distancia_total_km: number; // Distancia en kilómetros
+    puntos_gps: [number, number][];        // Paradas en orden de visita
+    ruta: [number, number][];              // Polilínea completa de la ruta
+    distancia_total_m: number;
+    distancia_total_km: number;
     instrucciones: InstruccionNavegacion[];
+    orden?: number[];                      // Solo con optimizar o regresarAlInicio: índice en la entrada de cada parada
+    optimizacion?: {                       // Solo con optimizar
+        distancia_original_m: number;
+        distancia_optimizada_m: number;
+        metodo: "exacto" | "heuristico";
+    };
 }
 
 export interface RespuestaRutaCompleta {
     resultado: ResultadoRuta;
     cache?: Record<string, string[]>;
+}
+
+export class ErrorRutaCraft extends Error {
+    readonly codigo: CodigoErrorRuta;      // Ver la tabla de errores más abajo
+}
+```
+
+### Errores
+
+Todas las promesas se rechazan con `ErrorRutaCraft`, cuyo `codigo` no cambia entre versiones aunque cambie el texto del mensaje:
+
+| `codigo` | Cuándo |
+| :--- | :--- |
+| `ENTRADA_INVALIDA` | Puntos fuera de rango o no numéricos, opciones incompatibles (`regresarAlInicio` + `fijarFinal`) |
+| `GRAFO_INVALIDO` | El grafo no existe o el archivo es inválido |
+| `SIN_RUTA` | Algún tramo entre paradas no tiene camino posible |
+| `TIMEOUT` | Se superó `timeoutMs` |
+| `PLATAFORMA_NO_SOPORTADA` | El paquete no incluye el motor para este sistema operativo y arquitectura |
+| `MOTOR_NO_DISPONIBLE` | El motor no pudo ejecutarse o terminó inesperadamente |
+| `INTERNO` | Error inesperado del motor |
+
+```javascript
+const { ErrorRutaCraft } = require('ruta-craft-osm');
+
+try {
+  const ruta = await motor.calcular(puntos);
+} catch (e) {
+  if (e instanceof ErrorRutaCraft && e.codigo === 'SIN_RUTA') {
+    mostrarAviso('No hay camino por calle entre algunas paradas');
+  } else {
+    throw e;
+  }
 }
 ```
 
@@ -216,5 +261,22 @@ app.on('before-quit', () => motor.cerrar());
 | Método | Descripción |
 | :--- | :--- |
 | `crearMotorRutas(opciones?)` | Crea el motor. El proceso `cli.exe --serve` se inicia en la primera llamada a `calcular()`. |
-| `motor.calcular(puntos)` | Devuelve una `Promise<ResultadoRuta>`. Acepta llamadas en paralelo; cada una se rechaza si supera `timeoutMs` o si el tramo no tiene ruta. |
+| `motor.calcular(puntos, opciones?)` | Devuelve una `Promise<ResultadoRuta>`. `opciones` acepta `optimizar`, `regresarAlInicio` y `fijarFinal`. Acepta llamadas en paralelo; cada una se rechaza con `ErrorRutaCraft` si falla. |
 | `motor.cerrar()` | Cierra el proceso y guarda el caché en `cachePath` (si `saveCache` no es `false`). Si el proceso termina inesperadamente, la siguiente llamada lo reinicia. |
+
+### Paso 5: optimizar el orden de las paradas
+Para una ruta de lectura de medidores, el motor puede decidir en qué orden visitar las paradas para recorrer lo menos posible. La primera parada siempre es el punto de inicio:
+
+```javascript
+const ruta = await motor.calcular(medidores, { optimizar: true, regresarAlInicio: true });
+
+console.log(`${ruta.optimizacion.distancia_original_m} m -> ${ruta.optimizacion.distancia_optimizada_m} m`);
+
+// ruta.orden[i] es el índice en `medidores` de la parada i-ésima del recorrido
+const medidoresEnOrden = ruta.orden.map(i => medidores[i]);
+```
+
+Con hasta 9 paradas el orden es el óptimo exacto; con más, una heurística (vecino más cercano + 2-opt + Or-opt) que nunca empeora el orden recibido. Una ruta de 50 paradas en toda la ciudad de Hermosillo se optimiza en ~0.5 s. Detalles del algoritmo en [3. Motor C++](./3_MOTOR_CPP_RUTACRAFT.md#8-optimización-del-orden-de-las-paradas).
+
+> [!NOTE]
+> Los cambios de cada versión del paquete están en [`ruta-craft-osm/CHANGELOG.md`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/ruta-craft-osm/CHANGELOG.md). La versión 0.1.0 cambia el comportamiento respecto a 0.0.7 (distancia corregida, errores tipados, instrucciones agrupadas por calle).

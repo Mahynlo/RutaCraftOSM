@@ -8,6 +8,7 @@
 #include "../include/json.hpp"
 #include "../include/ruta.hpp"
 #include "../include/archivos.hpp"
+#include "../include/errores.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -75,26 +76,38 @@ std::vector<Coordenada> puntos_desde_json(const json& j_puntos) {
 }
 
 // Modo servidor: el grafo se carga una sola vez y cada línea de stdin es una petición
-//   entrada: {"id": 1, "puntos": [[lat, lon], ...]}
-//   salida:  {"id": 1, "ok": true, "resultado": {...}}  |  {"id": 1, "ok": false, "error": "..."}
+//   entrada: {"id": 1, "puntos": [[lat, lon], ...], "optimizar": false, "regresar": false, "fijar_final": false}
+//   salida:  {"id": 1, "ok": true, "resultado": {...}}
+//            {"id": 1, "ok": false, "codigo": "SIN_RUTA", "error": "..."}
 // Al cerrarse stdin se guarda el caché (si aplica) y el proceso termina.
 int ejecutar_servidor(const Grafo& grafo, const KDTree& kdtree, GestorCache& cache_gestor) {
     std::string linea;
     while (std::getline(std::cin, linea)) {
         if (linea.find_first_not_of(" \t\r\n") == std::string::npos) continue;
 
-        json respuesta = {{"id", nullptr}};
+        json id = nullptr;
+        json respuesta;
         try {
-            json peticion = json::parse(linea);
-            if (peticion.contains("id")) respuesta["id"] = peticion["id"];
+            json peticion;
+            try {
+                peticion = json::parse(linea);
+            } catch (const std::exception& e) {
+                throw ErrorRuta(CodigoError::EntradaInvalida, std::string("Peticion JSON invalida: ") + e.what());
+            }
+            if (!peticion.is_object()) throw ErrorRuta(CodigoError::EntradaInvalida, "La peticion debe ser un objeto JSON");
+            if (peticion.contains("id")) id = peticion["id"];
+
+            OpcionesRuta opciones;
+            opciones.optimizar = peticion.value("optimizar", false);
+            opciones.regresar = peticion.value("regresar", false);
+            opciones.fijar_final = peticion.value("fijar_final", false);
 
             std::vector<Coordenada> puntos = puntos_desde_json(peticion.value("puntos", json::array()));
-            respuesta["resultado"] = calcular_ruta(grafo, kdtree, cache_gestor, puntos);
-            respuesta["ok"] = true;
+            respuesta = {{"id", id}, {"ok", true}, {"resultado", calcular_ruta(grafo, kdtree, cache_gestor, puntos, opciones)}};
+        } catch (const ErrorRuta& e) {
+            respuesta = {{"id", id}, {"ok", false}, {"codigo", nombre_codigo(e.codigo())}, {"error", e.what()}};
         } catch (const std::exception& e) {
-            respuesta.erase("resultado");
-            respuesta["ok"] = false;
-            respuesta["error"] = e.what();
+            respuesta = {{"id", id}, {"ok", false}, {"codigo", nombre_codigo(CodigoError::Interno)}, {"error", e.what()}};
         }
 
         std::cout << respuesta.dump(-1, ' ', false, json::error_handler_t::replace) << "\n" << std::flush;
@@ -104,13 +117,17 @@ int ejecutar_servidor(const Grafo& grafo, const KDTree& kdtree, GestorCache& cac
 
 int ejecutar(const std::vector<std::string>& argv);
 
+// Códigos de salida: 0 ok, 1 error interno, 2 entrada inválida, 3 grafo inválido, 4 sin ruta (ver errores.hpp)
 int main(int argc, char* argv[]) {
-    // Cualquier excepción no prevista termina con un mensaje y código 1, nunca con std::terminate
     try {
         return ejecutar(argumentos_utf8(argc, argv));
+    } catch (const ErrorRuta& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return static_cast<int>(e.codigo());
     } catch (const std::exception& e) {
-        std::cerr << "Error(py): " << e.what() << "\n";
-        return 1;
+        // Cualquier excepción no prevista termina con un mensaje, nunca con std::terminate
+        std::cerr << "Error: " << e.what() << "\n";
+        return static_cast<int>(CodigoError::Interno);
     }
 }
 
@@ -122,33 +139,37 @@ int ejecutar(const std::vector<std::string>& argv) {
     std::vector<double> array_coords;
     std::string salida_path = "";
     std::string cache_arg = "cache_rutas.json";
-    std::string cache_formato = "json";
     bool flag_stdout = false;
     bool no_save_cache = false;
     bool sin_cache = false;
     bool modo_servidor = false;
+    OpcionesRuta opciones;
+
+    auto valor = [&](int& i, const std::string& opcion) -> std::string {
+        if (i + 1 >= argc) throw ErrorRuta(CodigoError::EntradaInvalida, "Falta el valor de " + opcion);
+        return argv[++i];
+    };
 
     // Parseo de argumentos CLI
     for (int i = 0; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--grafo" && i + 1 < argc) {
-            grafo_path = argv[++i];
-        } else if (arg == "--puntos" && i + 1 < argc) {
-            puntos_arg = argv[++i];
+        const std::string& arg = argv[i];
+        if (arg == "--grafo") {
+            grafo_path = valor(i, arg);
+        } else if (arg == "--puntos") {
+            puntos_arg = valor(i, arg);
         } else if (arg == "--array") {
             while (i + 1 < argc && !es_opcion_cli(argv[i + 1])) {
                 try {
-                    array_coords.push_back(std::stod(argv[++i]));
+                    array_coords.push_back(std::stod(argv[i + 1]));
                 } catch (...) {
-                    break;
+                    throw ErrorRuta(CodigoError::EntradaInvalida, "Coordenada no numerica en --array: " + argv[i + 1]);
                 }
+                ++i;
             }
-        } else if (arg == "--salida" && i + 1 < argc) {
-            salida_path = argv[++i];
-        } else if (arg == "--cache" && i + 1 < argc) {
-            cache_arg = argv[++i];
-        } else if (arg == "--cache-formato" && i + 1 < argc) {
-            cache_formato = argv[++i];
+        } else if (arg == "--salida") {
+            salida_path = valor(i, arg);
+        } else if (arg == "--cache") {
+            cache_arg = valor(i, arg);
         } else if (arg == "--stdout") {
             flag_stdout = true;
         } else if (arg == "--no-save-cache") {
@@ -157,7 +178,19 @@ int ejecutar(const std::vector<std::string>& argv) {
             sin_cache = true;
         } else if (arg == "--serve") {
             modo_servidor = true;
+        } else if (arg == "--optimizar") {
+            opciones.optimizar = true;
+        } else if (arg == "--regresar") {
+            opciones.regresar = true;
+        } else if (arg == "--fijar-final") {
+            opciones.fijar_final = true;
+        } else {
+            throw ErrorRuta(CodigoError::EntradaInvalida, "Opcion desconocida: " + arg);
         }
+    }
+
+    if (opciones.regresar && opciones.fijar_final) {
+        throw ErrorRuta(CodigoError::EntradaInvalida, "Las opciones --regresar y --fijar-final no se pueden combinar");
     }
 
     // --sin-cache: ni se lee ni se escribe ningún archivo de caché
@@ -173,8 +206,7 @@ int ejecutar(const std::vector<std::string>& argv) {
         // Los puntos llegan por stdin
     } else if (!array_coords.empty()) {
         if (array_coords.size() % 2 != 0) {
-            std::cerr << "Error(py): cantidad impar de coordenadas en --array\n";
-            return 1;
+            throw ErrorRuta(CodigoError::EntradaInvalida, "cantidad impar de coordenadas en --array");
         }
         for (size_t i = 0; i < array_coords.size(); i += 2) {
             puntos_gps.push_back({array_coords[i], array_coords[i + 1]});
@@ -193,25 +225,22 @@ int ejecutar(const std::vector<std::string>& argv) {
             }
             puntos_gps = puntos_desde_json(j_puntos);
         } catch (const std::exception& e) {
-            std::cerr << "Error(py): Error al interpretar puntos: " << e.what() << "\n";
-            return 1;
+            throw ErrorRuta(CodigoError::EntradaInvalida, std::string("Error al interpretar puntos: ") + e.what());
         }
     } else {
-        std::cerr << "Error(py): debes proporcionar los puntos GPS con --array o --puntos\n";
-        return 1;
+        throw ErrorRuta(CodigoError::EntradaInvalida, "debes proporcionar los puntos GPS con --array o --puntos");
     }
 
     if (!modo_servidor && puntos_gps.empty()) {
-        std::cerr << "Error(py): Lista de puntos GPS vacia\n";
-        return 1;
+        throw ErrorRuta(CodigoError::EntradaInvalida, "Lista de puntos GPS vacia");
     }
 
     // Cargar Grafo
     const fs::path ruta_real_grafo = resolver_ruta_grafo(grafo_path);
     Grafo grafo;
     if (!CargadorGrafo::cargar(ruta_real_grafo, grafo)) {
-        std::cerr << "Error(py): El archivo '" << a_utf8(ruta_real_grafo) << "' no existe o formato no valido.\n";
-        return 1;
+        throw ErrorRuta(CodigoError::GrafoInvalido,
+                        "El archivo '" + a_utf8(ruta_real_grafo) + "' no existe o formato no valido.");
     }
 
     // Cargar Caché
@@ -227,12 +256,7 @@ int ejecutar(const std::vector<std::string>& argv) {
     if (modo_servidor) {
         codigo_salida = ejecutar_servidor(grafo, kdtree, cache_gestor);
     } else {
-        try {
-            resultado = calcular_ruta(grafo, kdtree, cache_gestor, puntos_gps);
-        } catch (const std::exception& e) {
-            std::cerr << "Error(py): " << e.what() << "\n";
-            return 1;
-        }
+        resultado = calcular_ruta(grafo, kdtree, cache_gestor, puntos_gps, opciones);
     }
 
     // Guardar cache si aplica
