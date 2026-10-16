@@ -1,6 +1,6 @@
 # 📦 4. Integración TypeScript y Electron (`ruta-craft-osm`)
 
-El paquete **`ruta-craft-osm`** es el puente (*wrapper*) tipado en TypeScript para consumir el motor de ruteo nativo desde Node.js, Electron o aplicaciones frontend de escritorio.
+El paquete **`ruta-craft-osm`** es el *wrapper* tipado en TypeScript que lanza el motor C++ desde Node.js o desde el proceso *main* de Electron (no desde el *renderer*, que no puede lanzar procesos). Por ejemplo, AguaVP lo usa en `src/generador_rutas/generar_ruta.js` para generar sus rutas de lectura de medidores.
 
 ---
 

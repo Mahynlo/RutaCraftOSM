@@ -1,13 +1,14 @@
 # 📚 Documentación Técnica de RutaCraftOSM
 
-Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
+**RutaCraftOSM** es una librería ligera para generar rutas de múltiples puntos por calles reales, sin conexión, dentro de una zona específica, sin instalar un servidor de ruteo como OSRM. Calcula la ruta más corta en distancia que recorre una lista de paradas, con instrucciones en español, sobre un grafo de OpenStreetMap de la zona que se elija. Un ejemplo de uso es AguaVP, que genera con ella sus rutas de lectura de medidores. Lo que hace, lo que aún no hace y las posibles mejoras están en [1. Arquitectura: propósito y alcance](./1_ARQUITECTURA_Y_MIGRACION.md).
 
 ---
 
 ## 🗺️ Índice de Contenidos
 
 1. [🏛️ Arquitectura Global y Migración a C++](./1_ARQUITECTURA_Y_MIGRACION.md)
-   - Visión general del sistema híbrido.
+   - Propósito, comparación con un servidor de ruteo, alcance y posibles mejoras.
+   - Visión general de las tres capas.
    - Motivación de la migración de Python a C++.
    - Validación de la migración: misma ruta y distancia que el motor Python.
    - Tabla de equivalencia funcional 1:1.
@@ -19,12 +20,12 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
    - Exportadores a formatos `.bin`, `.pkl` y `.json`.
    - Opción para respetar las calles de un solo sentido y grafo de Hermosillo para el benchmark.
 
-3. [⚡ Motor de Ruteo en C++ (`RutaCraftOSM_c`)](./3_MOTOR_CPP_RUTACRAFT.md)
+3. [⚙️ Motor de Rutas en C++ (`RutaCraftOSM_c`)](./3_MOTOR_CPP_RUTACRAFT.md)
    - Arquitectura modular del código C++20.
    - Especificación del formato binario `RCO2` (y compatibilidad con `RCO1`).
    - Búsqueda espacial $O(\log N)$ con KD-Tree.
    - Algoritmo A\* con heurística euclidiana plana en memoria contigua.
-   - Generador de maniobras giro a giro (*turn-by-turn*) y consolidación.
+   - Instrucciones giro a giro agrupadas por calle.
    - Compilación con CMake o `build.bat` (binario estático).
    - Referencia completa de la CLI, modo servidor (`--serve`) y códigos de error.
    - Optimización del orden de las paradas (exacto y heurístico).
@@ -38,14 +39,14 @@ Bienvenido a la documentación oficial y completa de **RutaCraftOSM**.
 
 5. [⏱️ Rendimiento del Motor C++](./5_RENDIMIENTO.md)
    - Tiempos medidos de carga, KD-Tree, A\* y ruta completa (generados con `bench/correr_benchmark.py`).
-   - Escalamiento del grafo rural de producción a la ciudad de Hermosillo.
+   - Comparación entre una zona rural (Mazatán - Villa Pesqueira) y una ciudad (Hermosillo).
    - Calidad de las instrucciones, ahorro al optimizar el orden e impacto de las calles de un solo sentido.
 
 6. [🗺️ Visualizador y Comparador Web Interactivo](./visualizacion_ruta.html)
    - Herramienta visual basada en Leaflet con las rutas de los escenarios del benchmark (Mazatán y Hermosillo).
    - Comparación superpuesta de la ruta ignorando y respetando los sentidos de las calles.
    - Enlaces directos a un escenario: `visualizacion_ruta.html?escenario=hermosillo-2&modo=compare`.
-   - Tarjetas de navegación giro a giro en tiempo real.
+   - Simulación animada del recorrido con el aviso de cada instrucción.
    - Abre directamente con doble clic en cualquier navegador web.
 
 ---
@@ -79,10 +80,10 @@ RutaCraftOSM/
 │   ├── core.py                 # Motor Python de referencia (paridad)
 │   └── cli.py                  # CLI del motor Python de referencia
 │
-├── RutaCraftOSM_c/             # Motor de Ruteo Nativo de Alto Rendimiento en C++
+├── RutaCraftOSM_c/             # Motor de rutas en C++
 │   ├── include/                # Cabeceras modulares (kdtree, astar, grafo, etc.)
 │   ├── src/main.cpp            # CLI principal de C++
-│   ├── bin/cli.exe             # Ejecutable compilado autónomo (generado)
+│   ├── bin/cli.exe             # Ejecutable compilado (generado)
 │   ├── bench/                  # Benchmark por fases y generador de 5_RENDIMIENTO.md
 │   ├── tests/                  # Pruebas automatizadas del motor C++
 │   ├── CMakeLists.txt          # Build multiplataforma
@@ -97,6 +98,6 @@ RutaCraftOSM/
 │   └── package.json            # Configuración del paquete npm
 │
 ├── Libretas/                   # Jupyter Notebooks de análisis y pruebas visuales
-├── .github/workflows/ci.yml    # CI: compila y prueba en Windows y Linux
+├── .github/workflows/ci.yml    # CI: compila y prueba en Windows, Linux y macOS
 └── README.md                   # README principal del repositorio
 ```

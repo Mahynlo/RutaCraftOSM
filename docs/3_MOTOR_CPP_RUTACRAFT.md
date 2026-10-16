@@ -1,6 +1,6 @@
-# ⚡ 3. Motor de Ruteo en C++ (`RutaCraftOSM_c`)
+# ⚙️ 3. Motor de Rutas en C++ (`RutaCraftOSM_c`)
 
-El motor en C++20 implementa un sistema de navegación y cálculo de rutas autónomo de alto rendimiento, libre de dependencias externas.
+El motor es un ejecutable de C++20 sin dependencias externas: carga el grafo, ajusta cada parada al nodo más cercano, calcula la ruta más corta en distancia entre paradas consecutivas y genera las instrucciones. Se usa desde la línea de comandos o desde el paquete npm. Su alcance (distancia y no tiempo, sin restricciones de giro, zona fija) está en [1. Propósito y alcance](./1_ARQUITECTURA_Y_MIGRACION.md).
 
 ---
 
@@ -12,7 +12,7 @@ RutaCraftOSM_c/bench/           # Benchmark por fases (ver 5. Rendimiento)
 RutaCraftOSM_c/include/
 ├── types.hpp           # Coordenada, Grafo (formato CSR) e Instruccion
 ├── geo_utils.hpp       # Fórmulas geométricas (Haversine, distancias planas y rumbos)
-├── kdtree.hpp          # Índice espacial KD-Tree 2D para snapping ultra rápido
+├── kdtree.hpp          # Índice espacial KD-Tree 2D para ajustar cada parada al nodo más cercano
 ├── astar.hpp           # A* (ruta entre dos nodos) y Dijkstra de uno a varios (matriz de distancias)
 ├── optimizar.hpp       # Optimización del orden de las paradas (exacto o 2-opt + Or-opt)
 ├── errores.hpp         # Tipos de error y códigos de salida
@@ -75,7 +75,7 @@ En lugar de calcular distancias contra todos los nodos del mapa (escaneo $O(N)$)
 La clase `Enrutador` en [`astar.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/astar.hpp) implementa el algoritmo A\* optimizado para hardware moderno:
 
 1. **Memoria reutilizada**: `g`, `padre`, `cerrado` y el montículo se reservan una sola vez (por hilo) y se reutilizan en cada búsqueda. Una marca de "generación" indica qué valores pertenecen a la búsqueda actual, así que no hay que reiniciar arreglos de tamaño $N$ por cada tramo de la ruta.
-2. **Min-Heap de Alto Rendimiento**: `std::priority_queue` sobre `std::pair<float, int>`.
+2. **Cola de prioridad (min-heap)**: `std::priority_queue` sobre `std::pair<float, int>`.
 3. **Aproximación Euclidiana Equirrectangular**:
    Para la heurística de distancia estimada al destino:
    $$\Delta x = (\text{lon}_2 - \text{lon}_1) \cdot \cos(\text{lat}_{\text{media}}) \cdot \frac{\pi R}{180}$$

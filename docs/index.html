@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RutaCraftOSM - Documentación y Visualizador</title>
+    <title>RutaCraftOSM - Rutas multi-parada sin conexión</title>
     
     <!-- Google Fonts & Font Awesome -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
@@ -56,11 +56,11 @@
                 <span class="badge-hero"><i class="fa-solid fa-microchip"></i> C++20</span>
                 <span class="badge-hero"><i class="fa-solid fa-map"></i> OpenStreetMap</span>
                 <span class="badge-hero"><i class="fa-solid fa-diagram-project"></i> A* + KD-Tree</span>
-                <span class="badge-hero"><i class="fa-solid fa-wifi"></i> 100% offline</span>
+                <span class="badge-hero"><i class="fa-solid fa-wifi"></i> Sin conexión</span>
             </div>
-            <h1>Calculadora de Rutas Offline de Alto Rendimiento</h1>
+            <h1>Rutas de múltiples puntos, sin servidor de ruteo</h1>
             <p>
-                Motor de navegación multi-parada 100% autónomo. Genera trazados óptimos, polilíneas de alta resolución e instrucciones paso a paso tipo GPS en menos de 60 milisegundos.
+                Librería ligera para generar rutas por calles reales en una zona específica, sin conexión y sin instalar OSRM ni un motor de ruteo grande. Calcula la ruta más corta en distancia entre las paradas, con instrucciones en español y, si se pide, un mejor orden de visita.
             </p>
             <div class="hero-actions">
                 <a href="visualizacion_ruta.html" class="btn-cta btn-cta-lg">
@@ -78,12 +78,37 @@
             </div>
         </section>
 
+        <!-- Alcance -->
+        <section class="scope-grid">
+            <div class="scope-card">
+                <h3><i class="fa-solid fa-check"></i> Qué hace</h3>
+                <ul>
+                    <li>Ruta más corta <strong>en distancia</strong> entre paradas consecutivas</li>
+                    <li>Distancia total, polilínea e instrucciones por calle</li>
+                    <li>Mejor orden de visita (opcional): exacto hasta 9 paradas</li>
+                    <li>Sin internet, en la zona que elijas (grafo generado desde OpenStreetMap)</li>
+                </ul>
+            </div>
+            <div class="scope-card">
+                <h3><i class="fa-solid fa-clock"></i> Qué no hace todavía</h3>
+                <ul>
+                    <li>Tiempos de llegada, velocidades y tráfico (posible mejora)</li>
+                    <li>Restricciones de giro; el grafo de ejemplo ignora los sentidos de las calles</li>
+                    <li>Navegación en tiempo real</li>
+                    <li>Grafos muy grandes (un estado o un país completo)</li>
+                </ul>
+            </div>
+        </section>
+        <p class="scope-more">
+            Alcance completo, comparación con un servidor de ruteo y posibles mejoras en <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md">1. Arquitectura: propósito y alcance</a>.
+        </p>
+
         <!-- Benchmark Showcase -->
         <section class="benchmark-card">
             <div class="section-head">
                 <div>
                     <h2><i class="fa-solid fa-gauge-high"></i> Rendimiento del motor C++20</h2>
-                    <p>Ruta municipal de 23 paradas· medido el 2026-10-15</p>
+                    <p>Ruta municipal de 23 paradas · medido el 2026-10-15</p>
                 </div>
                 <a href="doc.html?doc=5_RENDIMIENTO.md" class="section-link">
                     Ver benchmark completo <i class="fa-solid fa-arrow-right"></i>
@@ -127,7 +152,7 @@
                 <div>
                     <div class="doc-icon icon-blue"><i class="fa-solid fa-sitemap"></i></div>
                     <div class="doc-title">1. Arquitectura y Migración</div>
-                    <div class="doc-desc">Arquitectura por capas, por qué se migró a C++ y validación de que ambos motores dan la misma ruta.</div>
+                    <div class="doc-desc">Propósito y alcance, arquitectura por capas y validación de que el motor C++ da la misma ruta que el de Python.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
@@ -145,7 +170,7 @@
                 <div>
                     <div class="doc-icon icon-cyan"><i class="fa-solid fa-microchip"></i></div>
                     <div class="doc-title">3. Motor Nativo C++20</div>
-                    <div class="doc-desc">Formato binario RCO2, KD-Tree 2D, algoritmo A*, compilación multiplataforma con CMake y referencia de la CLI.</div>
+                    <div class="doc-desc">Formato binario RCO2, KD-Tree, A*, instrucciones, optimización del orden, compilación con CMake y referencia de la CLI.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
@@ -279,7 +304,7 @@ app.<span class="token-fn">on</span>(<span class="token-str">'before-quit'</span
         </div>
 
         <footer class="footer">
-            RutaCraftOSM &bull; Motor de Rutas y Navegación con OpenStreetMap &bull; 2026
+            RutaCraftOSM &bull; Rutas multi-parada sin conexión con datos de OpenStreetMap &bull; 2026
         </footer>
     </main>
 

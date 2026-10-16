@@ -212,6 +212,58 @@
 
 .section-link:hover { text-decoration: underline; }
 
+/* Alcance (qué hace / qué no hace) */
+.scope-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.scope-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+}
+
+.scope-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scope-card:first-child h3 i { color: var(--success); }
+.scope-card:last-child h3 i { color: var(--text-muted); }
+
+.scope-card ul {
+    list-style: disc;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+.scope-card li { margin-bottom: 4px; }
+.scope-card strong { color: var(--text-main); }
+
+.scope-more {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.scope-more a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.scope-more a:hover { text-decoration: underline; }
+
 /* Benchmark Showcase */
 .benchmark-card {
     background: var(--surface);

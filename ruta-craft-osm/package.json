@@ -1,7 +1,7 @@
 {
   "name": "ruta-craft-osm",
   "version": "0.1.0",
-  "description": "Cálculo de rutas multi-parada offline sobre grafos de OpenStreetMap, con motor nativo en C++ para Node.js y Electron",
+  "description": "Rutas de múltiples puntos sin conexión sobre un grafo de OpenStreetMap de tu zona, sin servidor de ruteo: motor en C++ para Node.js y Electron.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

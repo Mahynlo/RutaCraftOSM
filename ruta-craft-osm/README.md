@@ -1,11 +1,13 @@
 # ruta-craft-osm
 
-Cálculo de rutas multi-parada **offline** sobre grafos viales de OpenStreetMap para Node.js y Electron. El cálculo lo hace un motor nativo en C++ (A\*, KD-Tree) incluido en el paquete; no requiere conexión ni servicios externos.
+Genera rutas de múltiples puntos por calles reales, **sin conexión**, para Node.js y Electron, dentro de una zona específica y sin instalar un servidor de ruteo como OSRM. Lo hace un motor en C++ (A\*, KD-Tree) incluido en el paquete, sobre un grafo de OpenStreetMap de la zona que se elija. Trae como ejemplo el grafo de Mazatán y Villa Pesqueira (Sonora); AguaVP lo usa para sus rutas de lectura de medidores.
 
-- Ruta por calles, distancia e instrucciones giro a giro (`"Gira a la derecha en Calle Morelos"`).
-- Optimización del orden de las paradas (visitar todas recorriendo lo menos posible).
+- Ruta por calles **más corta en distancia**, distancia total e instrucciones en español por calle (`"Gira a la derecha en Calle Morelos"`).
+- Optimización opcional del orden de las paradas.
 - Motor persistente para Electron: menos de 1 ms por ruta con el grafo ya cargado.
 - Windows x64, Linux x64 y macOS (Intel y Apple Silicon).
+
+**Alcance actual:** las rutas minimizan distancia. Todavía no estima tiempos (velocidades, tráfico) ni tiene restricciones de giro, y el grafo de ejemplo ignora los sentidos de las calles. No es navegación en tiempo real. Para otra zona se genera un grafo propio con el pipeline de Python del repositorio y se pasa en la opción `grafo`.
 
 ## Instalación
 

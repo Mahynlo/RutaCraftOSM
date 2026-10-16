@@ -1,21 +1,66 @@
-# 🚗 RutaCraftOSM (Calculadora de Rutas de Alto Rendimiento con OSM)
+# 🚗 RutaCraftOSM
 
-**RutaCraftOSM** es un motor de navegación y cálculo de rutas óptimas 100% offline basado en grafos viales de OpenStreetMap (OSM). Integra un pipeline de datos geográficos en Python gestionado con **`uv`**, un **motor de alto rendimiento en C++20** con indexación espacial **KD-Tree** y un **wrapper tipado en TypeScript/npm** listo para aplicaciones de escritorio en **Electron** y **Node.js**.
+**RutaCraftOSM** es una librería ligera para **generar rutas de múltiples puntos** por calles reales, **sin conexión a internet**, dentro de una zona específica.
+
+Su objetivo es que una aplicación pueda calcular rutas en su propia zona de trabajo (un municipio, una ciudad, un conjunto de colonias) **sin instalar ni operar un servidor de ruteo** como OSRM, GraphHopper o Valhalla. No hace falta Docker, base de datos ni procesar el mapa de un país: basta con un archivo de grafo de pocos MB y un ejecutable incluido en el paquete npm.
+
+Tiene tres partes:
+
+1. **Un script en Python** (con `uv` y OSMnx) que descarga de OpenStreetMap las calles de la zona que elijas y las guarda en un archivo binario.
+2. **Un ejecutable en C++** que carga ese archivo y calcula las rutas.
+3. **Un paquete npm** (`ruta-craft-osm`) para usarlo desde Node.js o Electron.
+
+**Ejemplo de uso:** AguaVP, un sistema de gestión de agua potable, la usa para generar las rutas de lectura de medidores. El paquete incluye como grafo de ejemplo el de los municipios de Mazatán y Villa Pesqueira (Sonora), y también se probó con la ciudad de Hermosillo.
 
 ---
 
-## ⚡ Características Principales
+## 🎯 Alcance
 
-* 🧭 **Multi-paradas**: Soporta origen, múltiples paradas intermedias y destino.
-* 🔀 **Optimización del orden**: Reordena las paradas para recorrer lo menos posible (óptimo exacto hasta 9 paradas; heurística 2-opt + Or-opt para más). En rutas desordenadas de prueba, entre 63% y 74% menos distancia.
-* ⚡ **Ultra Rápido**: Motor nativo en C++20: una ruta multi-parada tarda **< 1 ms** con el motor persistente y **~50 ms** por llamada con `calcularRuta()` en el grafo de producción ([benchmark](./docs/5_RENDIMIENTO.md)).
-* 🌲 **Snapping $O(\log N)$ con KD-Tree**: Búsqueda del nodo más cercano instantánea sin evaluar linealmente todo el grafo.
-* 📦 **Formato Binario `RCO2`**: Arreglos contiguos que se cargan en **~2 ms** (25 mil nodos) y **~6 ms** (Hermosillo, 75 mil nodos), con 8 y 19 MB de memoria.
-* 🧾 **Instrucciones Tipo GPS (*Turn-by-turn*)**: Maniobras de giro (*"Sigue recto"*, *"Gira a la derecha"*), nombres de calles y consolidación de tramos.
-* 💻 **Multiplataforma**: Binarios para Windows x64, Linux x64 y macOS (Intel y Apple Silicon), compilados y probados en CI.
-* 🚦 **Errores tipados**: Códigos de salida por tipo de error en la CLI y `ErrorRutaCraft.codigo` en el wrapper.
-* 🔌 **Integración Transparente con Electron**: Motor persistente (`crearMotorRutas()`) y detección automática en entornos de producción empaquetados (`app.asar.unpacked`).
-* 🐍 **Gestión Moderna con `uv`**: Extracción y preparación de datos geográficos reproducible y rápida.
+### Qué hace
+
+Recibe una lista de coordenadas `[lat, lon]` (inicio y paradas) y devuelve:
+
+- **La ruta más corta en distancia** por la red de calles para visitarlas en el orden dado, como polilínea de coordenadas.
+- **La distancia total** en metros y kilómetros.
+- **Instrucciones en español**, una por calle: *"Sigue recto"*, *"Gira a la derecha en Calle Morelos"*, con la distancia de cada tramo.
+- **Opcionalmente, un mejor orden de visita**: reordena las paradas para recorrer menos distancia. Puede volver al inicio o mantener una parada final.
+
+Funciona con el grafo de cualquier zona que se genere con el script de Python, siempre que sea de un tamaño manejable: se probó desde zonas rurales de 25 mil nodos hasta una ciudad de 75 mil.
+
+### Qué no hace todavía
+
+La versión actual es intencionalmente simple. Estas son sus limitaciones; varias son mejoras posibles a futuro:
+
+- **Distancia, no tiempo.** Minimiza metros. Aún no usa velocidades, tipos de vía ni tráfico, y no estima tiempos de llegada.
+- **Sentidos de las calles.** El grafo de ejemplo los ignora, así que una ruta puede ir en contrasentido. El motor ya acepta grafos que los respetan (opción `respetar_sentido` del script de Python).
+- **Sin restricciones de giro** (giros prohibidos, etc.).
+- **Solo automóvil.** No hay perfiles de peatón ni de bicicleta.
+- **Paradas al nodo más cercano.** Cada parada se ajusta al cruce o punto de calle más cercano del grafo, no al punto exacto sobre la calle.
+- **Una zona por grafo.** Solo hay ruta dentro del grafo cargado. No está pensado para grafos muy grandes, como un estado o un país completo.
+- **Sin guía en tiempo real.** Las instrucciones se calculan una vez; no siguen la posición del usuario ni recalculan.
+- **Optimización simple del orden:** un vehículo, sin ventanas de horario ni capacidades. Con hasta 9 paradas el orden es el óptimo exacto; con más es una aproximación pensada para decenas de paradas (50 paradas en ~0.5 s).
+- **Nombres de calle.** Dependen de OpenStreetMap: las calles sin nombre aparecen como `"desconocida"`.
+
+### Por qué en C++
+
+La primera versión era Python empaquetado con Nuitka: tardaba ~1 s por ruta y pesaba más de 15 MB en DLLs. El ejecutable en C++ da exactamente la misma ruta y distancia. Tarda ~30–60 ms si se lanza una vez por ruta y menos de 1 ms con el grafo ya cargado (motor persistente). Usa unos 8 MB de memoria con el grafo de ejemplo. Las cifras están medidas en [5. Rendimiento](./docs/5_RENDIMIENTO.md).
+
+---
+
+## ⚙️ Funcionalidades
+
+* 🧭 **Rutas multi-parada**: inicio, paradas intermedias y final, en el orden recibido.
+* 🔀 **Optimización del orden de las paradas** (opcional): en rutas de prueba con las paradas desordenadas, la distancia baja entre 63% y 74%.
+* 🧾 **Instrucciones agrupadas por calle**: tipos de giro (ligero, normal, brusco, vuelta en U) y sin tramos de menos de 15 m.
+* 🗺️ **Grafo de la zona que elijas**: se genera desde OpenStreetMap con el script de Python, a partir de polígonos GeoJSON.
+* 🌲 **Ajuste rápido de cada parada al grafo** con un KD-Tree, y A\* sobre el grafo cargado en arreglos contiguos.
+* 📦 **Grafo en formato binario `RCO2`**: 1.3 MB para una zona de 25 mil nodos, se carga en ~2 ms.
+* 💾 **Caché de tramos** en un archivo JSON: los tramos ya calculados no se recalculan.
+* 🔌 **Pensado para Electron**:
+  * Motor persistente (`crearMotorRutas()`) que carga el grafo una sola vez.
+  * Funciona dentro de la app empaquetada (`app.asar.unpacked`).
+  * Errores con código (`ErrorRutaCraft.codigo`).
+* 💻 **Multiplataforma**: binarios para Windows x64, Linux x64 y macOS (Intel y Apple Silicon), compilados y probados en CI.
 
 ---
 
@@ -31,7 +76,7 @@ RutaCraftOSM/
 │   ├── 4_INTEGRACION_TYPESCRIPT_ELECTRON.md # Wrapper npm y Electron
 │   └── 5_RENDIMIENTO.md        # Benchmark del motor C++ (generado)
 │
-├── RutaCraftOSM_c/             # ⚡ Motor de Ruteo en C++20
+├── RutaCraftOSM_c/             # ⚙️ Motor de rutas en C++20
 │   ├── include/                # Cabeceras (kdtree, astar, grafo, cache, etc.)
 │   ├── src/main.cpp            # CLI principal
 │   ├── bin/cli.exe             # Binario estático compilado (generado, no versionado)
@@ -55,7 +100,7 @@ RutaCraftOSM/
 │   └── package.json            # Configuración npm
 │
 ├── Libretas/                   # 📓 Jupyter Notebooks de análisis y pruebas
-└── .github/workflows/ci.yml    # 🤖 CI: compila y prueba en Windows y Linux
+└── .github/workflows/ci.yml    # 🤖 CI: compila y prueba en Windows, Linux y macOS
 ```
 
 ---
@@ -136,7 +181,7 @@ python -m unittest tests/test_cli.py tests/test_cli_errores.py
 npm test
 ```
 
-GitHub Actions ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) compila el motor en Windows y Linux, corre las tres suites en cada push a `main` y en cada pull request, y prueba el wrapper con el binario recién compilado.
+GitHub Actions ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) compila el motor en Windows, Linux y macOS, corre las tres suites en cada push a `main` y en cada pull request, y prueba el wrapper con el binario recién compilado.
 
 ### Benchmark
 
@@ -155,7 +200,7 @@ Regenera [`docs/5_RENDIMIENTO.md`](./docs/5_RENDIMIENTO.md), `docs/benchmark.jso
 Para consultar la guía técnica completa, revisa la carpeta [`docs/`](./docs/README.md):
 * [🏛️ Arquitectura Global y Migración a C++](./docs/1_ARQUITECTURA_Y_MIGRACION.md)
 * [🐍 Pipeline de Datos en Python con `uv`](./docs/2_IMPLEMENTACION_PYTHON_UV.md)
-* [⚡ Motor de Ruteo en C++ (`RutaCraftOSM_c`)](./docs/3_MOTOR_CPP_RUTACRAFT.md)
+* [⚙️ Motor de Rutas en C++ (`RutaCraftOSM_c`)](./docs/3_MOTOR_CPP_RUTACRAFT.md)
 * [📦 Integración TypeScript y Electron](./docs/4_INTEGRACION_TYPESCRIPT_ELECTRON.md)
 * [⏱️ Rendimiento del Motor C++](./docs/5_RENDIMIENTO.md)
 * [🗺️ Visualizador de Rutas del Benchmark](./docs/visualizacion_ruta.html)
