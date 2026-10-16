@@ -5,25 +5,25 @@
 **RutaCraftOSM** utiliza una **arquitectura híbrida por capas**, separando estrictamente la preparación de datos geográficos de la ejecución del motor de ruteo en tiempo real:
 
 ```mermaid
-flowchart TD
-    subgraph Capa_Preparacion ["1. Preparación de Datos (Python + uv)"]
-        OSM["OpenStreetMap (Overpass API)"] -->|OSMnx + GeoPandas| PREP["preparar_grafo.py"]
-        PREP -->|Genera| BIN["grafo_zona.bin (Formato RCO2)"]
+flowchart TB
+    subgraph Capa_Preparacion ["1. Preparación de datos (Python + uv)"]
+        direction LR
+        OSM["OpenStreetMap<br/>(Overpass API)"] -->|OSMnx + GeoPandas| PREP["preparar_grafo.py"]
+        PREP -->|genera| BIN["grafo_zona.bin<br/>(formato RCO2)"]
     end
 
-    subgraph Capa_Motor ["2. Motor de Ruteo (C++ Nativo)"]
-        BIN -->|"Carga del grafo (~2 ms)"| MOTOR["RutaCraftOSM_c (cli.exe)"]
-        KDTREE["KD-Tree (Snapping O(log N))"] --> MOTOR
-        ASTAR["A* sobre grafo CSR"] --> MOTOR
-        INST["Generador de Maniobras Turn-by-Turn"] --> MOTOR
+    subgraph Capa_Motor ["2. Motor de ruteo (C++ nativo, cli.exe)"]
+        direction LR
+        KDTREE["KD-Tree<br/>snapping O(log N)"] --> ASTAR["A* sobre<br/>grafo CSR"] --> INST["Instrucciones<br/>giro a giro"]
     end
 
-    subgraph Capa_Consumo ["3. Consumo en Aplicaciones (Node.js / Electron)"]
-        APP["App Desktop / Logística / Agua"] -->|Importa| WRAPPER["ruta-craft-osm (TypeScript)"]
-        WRAPPER -->|spawn subproceso| MOTOR
-        MOTOR -->|JSON en ~50ms| WRAPPER
-        WRAPPER -->|Ruta + Instrucciones| APP
+    subgraph Capa_Consumo ["3. Consumo en aplicaciones (Node.js / Electron)"]
+        direction LR
+        WRAPPER["ruta-craft-osm<br/>(TypeScript)"] -->|resuelve la promesa| APP["App de escritorio<br/>(AguaVP)"]
     end
+
+    Capa_Preparacion -->|"carga del grafo (~2 ms)"| Capa_Motor
+    Capa_Motor <-->|"puntos por stdin / ruta + instrucciones en JSON"| Capa_Consumo
 ```
 
 ---

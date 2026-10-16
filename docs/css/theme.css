@@ -6,27 +6,53 @@
     --primary: #3b82f6;
     --primary-dark: #1d4ed8;
     --primary-light: #60a5fa;
+    --primary-soft: rgba(59, 130, 246, 0.12);
     --cpp: #06b6d4;
     --python: #f59e0b;
     --success: #10b981;
     --danger: #ef4444;
     --purple: #a855f7;
-    
+
     /* Dark Theme Palette (Default) */
     --bg-dark: #0f172a;
     --surface: #1e293b;
-    --surface-card: #334155;
-    --surface-hover: #3b4b63;
-    --code-bg: #0d1117;
-    --code-text: #e6edf3;
-    --navbar-bg: rgba(15, 23, 42, 0.95);
-    
-    --text-main: #f8fafc;
+    --surface-card: #273449;
+    --surface-hover: #334155;
+    --navbar-bg: rgba(15, 23, 42, 0.92);
+
+    --text-main: #f1f5f9;
+    --text-body: #cbd5e1;
     --text-muted: #94a3b8;
     --border: #334155;
-    --border-light: rgba(255, 255, 255, 0.08);
-    --shadow-color: rgba(0, 0, 0, 0.4);
-    --hero-title-grad: linear-gradient(to right, #ffffff, #94a3b8);
+    --border-light: rgba(255, 255, 255, 0.06);
+    --shadow-color: rgba(0, 0, 0, 0.35);
+
+    /* Código */
+    --code-bg: #0d1117;
+    --code-header: #161b22;
+    --code-border: #30363d;
+    --code-text: #e6edf3;
+    --code-muted: #8b949e;
+    --inline-code-bg: rgba(148, 163, 184, 0.14);
+    --inline-code-text: #e2e8f0;
+    --tok-keyword: #ff7b72;
+    --tok-string: #a5d6ff;
+    --tok-number: #79c0ff;
+    --tok-comment: #8b949e;
+    --tok-function: #d2a8ff;
+    --tok-type: #ffa657;
+    --tok-property: #7ee787;
+
+    /* Diagramas */
+    --diagram-bg: #111a2e;
+    --diagram-node: #1e293b;
+    --diagram-node-border: #3b82f6;
+    --diagram-cluster: #172033;
+    --diagram-cluster-border: #334155;
+    --diagram-line: #64748b;
+    --diagram-text: #e2e8f0;
+    --diagram-note: #2a2416;
+    --diagram-note-border: #a16207;
 }
 
 /* Light Theme */
@@ -34,6 +60,7 @@
     --primary: #2563eb;
     --primary-dark: #1d4ed8;
     --primary-light: #2563eb;
+    --primary-soft: rgba(37, 99, 235, 0.08);
     --cpp: #0891b2;
     --python: #d97706;
     --success: #059669;
@@ -44,16 +71,39 @@
     --surface: #ffffff;
     --surface-card: #f1f5f9;
     --surface-hover: #e2e8f0;
-    --code-bg: #0d1117;
-    --code-text: #e6edf3;
-    --navbar-bg: rgba(255, 255, 255, 0.95);
-    
+    --navbar-bg: rgba(255, 255, 255, 0.92);
+
     --text-main: #0f172a;
+    --text-body: #334155;
     --text-muted: #64748b;
     --border: #e2e8f0;
-    --border-light: rgba(0, 0, 0, 0.06);
-    --shadow-color: rgba(0, 0, 0, 0.06);
-    --hero-title-grad: linear-gradient(to right, #0f172a, #334155);
+    --border-light: rgba(0, 0, 0, 0.05);
+    --shadow-color: rgba(15, 23, 42, 0.06);
+
+    --code-bg: #f6f8fa;
+    --code-header: #eef1f5;
+    --code-border: #d8dee4;
+    --code-text: #1f2328;
+    --code-muted: #656d76;
+    --inline-code-bg: #eef2f7;
+    --inline-code-text: #0f172a;
+    --tok-keyword: #cf222e;
+    --tok-string: #0a3069;
+    --tok-number: #0550ae;
+    --tok-comment: #6e7781;
+    --tok-function: #8250df;
+    --tok-type: #953800;
+    --tok-property: #116329;
+
+    --diagram-bg: #ffffff;
+    --diagram-node: #eff6ff;
+    --diagram-node-border: #3b82f6;
+    --diagram-cluster: #f8fafc;
+    --diagram-cluster-border: #cbd5e1;
+    --diagram-line: #64748b;
+    --diagram-text: #0f172a;
+    --diagram-note: #fffbeb;
+    --diagram-note-border: #f59e0b;
 }
 
 * {
@@ -64,12 +114,29 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+code, pre, kbd, samp {
+    font-family: 'Fira Code', ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 body {
     background-color: var(--bg-dark);
     color: var(--text-main);
     line-height: 1.6;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* Colores de sintaxis (highlight.js y bloques escritos a mano en la portada) */
+.hljs { color: var(--code-text); background: transparent; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-literal, .token-kw { color: var(--tok-keyword); }
+.hljs-string, .hljs-regexp, .hljs-template-string, .token-str { color: var(--tok-string); }
+.hljs-number, .hljs-symbol, .token-num, .token-cmd { color: var(--tok-number); }
+.hljs-comment, .hljs-quote, .token-com { color: var(--tok-comment); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-section, .token-fn { color: var(--tok-function); }
+.hljs-type, .hljs-title.class_, .hljs-meta, .token-type { color: var(--tok-type); }
+.hljs-attr, .hljs-attribute, .hljs-property, .hljs-variable, .hljs-params, .token-prop { color: var(--tok-property); }
+.hljs-meta .hljs-keyword { color: var(--tok-type); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
 
 /* Theme Selector Button */
 .btn-theme-toggle {
@@ -84,7 +151,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all 0.2s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
@@ -95,17 +162,12 @@ body {
     border-color: var(--primary);
 }
 
-.btn-theme-toggle:active {
-    transform: scale(0.93);
-}
-
 /* Mobile Responsive Theme Toggle */
 @media (max-width: 768px) {
     .btn-theme-toggle {
         width: 36px;
         height: 36px;
         padding: 0;
-        border-radius: 8px;
         font-size: 0.95rem;
         flex-shrink: 0;
     }
@@ -116,16 +178,16 @@ body {
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
 }
 ::-webkit-scrollbar-track {
-    background: var(--bg-dark);
+    background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: var(--surface-card);
+    background: var(--border);
     border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-light);
+    background: var(--text-muted);
 }

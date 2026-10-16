@@ -10,34 +10,32 @@ La librería interactúa con el binario nativo compilado mediante el módulo est
 
 ```mermaid
 sequenceDiagram
-    participant App as App Electron / React
-    participant TS as ruta-craft-osm (index.ts)
-    participant Cpp as cli.exe (C++ Native)
-    participant Bin as grafo_zona.bin
+    participant App as App Electron
+    participant TS as ruta-craft-osm
+    participant Cpp as cli.exe (C++)
 
-    App->>TS: calcularRuta({ puntos: [...] })
-    TS->>Cpp: spawn("cli.exe", ["--stdout", "--puntos", "-"]) + puntos por stdin
-    Cpp->>Bin: Carga del grafo (~2 ms)
-    Cpp->>Cpp: KD-Tree + A* + Instrucciones
-    Cpp-->>TS: Emite JSON en stdout (~50ms)
-    TS-->>App: Resuelve Promise con RespuestaRutaCompleta
+    App->>TS: calcularRuta({ puntos })
+    TS->>Cpp: spawn --stdout --puntos -<br/>(puntos por stdin)
+    Note over Cpp: carga el grafo .bin (~2 ms)<br/>KD-Tree + A* + instrucciones
+    Cpp-->>TS: JSON por stdout
+    TS-->>App: RespuestaRutaCompleta<br/>(~30-60 ms en total)
 ```
 
 Además existe un **modo persistente** (`crearMotorRutas()`): se lanza una sola vez `cli.exe --serve`, que mantiene el grafo, el KD-Tree y el caché en memoria, y cada ruta viaja como una línea JSON por stdin/stdout:
 
 ```mermaid
 sequenceDiagram
-    participant App as App Electron / React
-    participant TS as MotorRutas (index.ts)
+    participant App as App Electron
+    participant TS as MotorRutas
     participant Cpp as cli.exe --serve
 
     App->>TS: crearMotorRutas({ cachePath })
-    App->>TS: motor.calcular([...])
-    TS->>Cpp: spawn (solo la primera vez) + {"id":1,"puntos":[...]}
-    Cpp-->>TS: {"id":1,"ok":true,"resultado":{...}} (< 1 ms)
-    TS-->>App: Resuelve Promise con ResultadoRuta
+    App->>TS: motor.calcular(puntos)
+    TS->>Cpp: {"id":1,"puntos":[...]}<br/>(spawn solo la primera vez)
+    Cpp-->>TS: {"id":1,"ok":true,"resultado":...}<br/>(menos de 1 ms)
+    TS-->>App: ResultadoRuta
     App->>TS: motor.cerrar()
-    TS->>Cpp: Cierra stdin → guarda caché y termina
+    TS->>Cpp: cierra stdin: guarda el caché<br/>y termina
 ```
 
 | | `calcularRuta()` | `crearMotorRutas()` |

@@ -13,23 +13,6 @@
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/landing.css">
     
-    <!-- Tailwind CSS CDN & Config -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brandCpp: '#06b6d4',
-                        brandPython: '#f59e0b',
-                        brandPrimary: '#3b82f6'
-                    }
-                }
-            }
-        }
-    </script>
-    
     <!-- Theme Manager -->
     <script src="js/theme.js"></script>
 </head>
@@ -38,7 +21,7 @@
     <!-- Navbar -->
     <header class="navbar">
         <a href="index.html" class="nav-brand">
-            <i class="fa-solid fa-route" style="color: var(--cpp);"></i>
+            <i class="fa-solid fa-route"></i>
             RutaCraftOSM
         </a>
 
@@ -69,21 +52,18 @@
         
         <!-- Hero Section -->
         <section class="hero">
-            <div class="badge-hero">
-                <i class="fa-solid fa-bolt"></i> C++
-            </div>
-             <div class="badge-hero">
-                <i class="fa-solid fa-bolt"></i> OpenStreetMap
-            </div>
-             <div class="badge-hero">
-                <i class="fa-solid fa-bolt"></i> KD-Tree O(log N)
+            <div class="hero-badges">
+                <span class="badge-hero"><i class="fa-solid fa-microchip"></i> C++20</span>
+                <span class="badge-hero"><i class="fa-solid fa-map"></i> OpenStreetMap</span>
+                <span class="badge-hero"><i class="fa-solid fa-diagram-project"></i> A* + KD-Tree</span>
+                <span class="badge-hero"><i class="fa-solid fa-wifi"></i> 100% offline</span>
             </div>
             <h1>Calculadora de Rutas Offline de Alto Rendimiento</h1>
             <p>
                 Motor de navegación multi-parada 100% autónomo. Genera trazados óptimos, polilíneas de alta resolución e instrucciones paso a paso tipo GPS en menos de 60 milisegundos.
             </p>
             <div class="hero-actions">
-                <a href="visualizacion_ruta.html" class="btn-cta" style="padding: 12px 24px; font-size: 1rem;">
+                <a href="visualizacion_ruta.html" class="btn-cta btn-cta-lg">
                     <i class="fa-solid fa-play"></i>
                     Probar Visualizador Web
                 </a>
@@ -100,12 +80,12 @@
 
         <!-- Benchmark Showcase -->
         <section class="benchmark-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div class="section-head">
                 <div>
-                    <h2 style="font-size: 1.4rem; font-weight: 800;">⚡ Rendimiento del Motor C++20</h2>
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">Ruta municipal de 23 paradas (Mazatán - Villa Pesqueira) · medido el 2026-10-15</p>
+                    <h2><i class="fa-solid fa-gauge-high"></i> Rendimiento del motor C++20</h2>
+                    <p>Ruta municipal de 23 paradas· medido el 2026-10-15</p>
                 </div>
-                <a href="doc.html?doc=5_RENDIMIENTO.md" style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; text-decoration: none;">
+                <a href="doc.html?doc=5_RENDIMIENTO.md" class="section-link">
                     Ver benchmark completo <i class="fa-solid fa-arrow-right"></i>
                 </a>
             </div>
@@ -113,29 +93,34 @@
             <div class="bench-grid">
                 <div class="stat-box">
                     <div class="stat-label">Motor persistente</div>
-                    <div class="stat-num" style="color: var(--cpp);">0.54 ms</div>
-                    <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">Por ruta, grafo ya cargado</div>
+                    <div class="stat-num stat-cpp">0.54 ms</div>
+                    <div class="stat-note">Por ruta, grafo ya cargado</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">calcularRuta()</div>
-                    <div class="stat-num" style="color: var(--primary);">~30–60 ms</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">Incluye arrancar cli.exe y cargar el grafo</div>
+                    <div class="stat-num stat-primary">~30–60 ms</div>
+                    <div class="stat-note">Incluye arrancar cli.exe y cargar el grafo</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Ciudad de Hermosillo</div>
-                    <div class="stat-num" style="color: var(--python);">2–3 ms</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">Por ruta en un grafo de 75 mil nodos</div>
+                    <div class="stat-num stat-python">2–3 ms</div>
+                    <div class="stat-note">Por ruta en un grafo de 75 mil nodos</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Consumo de RAM</div>
-                    <div class="stat-num" style="color: var(--purple);">8 MB</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">19 MB con el grafo de Hermosillo</div>
+                    <div class="stat-num stat-purple">8 MB</div>
+                    <div class="stat-note">19 MB con el grafo de Hermosillo</div>
                 </div>
             </div>
         </section>
 
         <!-- Documentation Guides Grid -->
-        <h2 style="font-size: 1.5rem; font-weight: 800; margin-top: 40px;">📚 Guías Técnicas Detalladas</h2>
+        <div class="section-head">
+            <div>
+                <h2><i class="fa-solid fa-book-open"></i> Guías técnicas</h2>
+                <p>Desde la preparación del grafo hasta la integración en Electron</p>
+            </div>
+        </div>
         <div class="docs-grid">
             
             <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="doc-card">
@@ -186,41 +171,34 @@
         </div>
 
         <!-- Quick Code Example -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 50px; flex-wrap: wrap; gap: 10px;">
+        <div class="section-head">
             <div>
-                <h2 style="font-size: 1.4rem; font-weight: 800;">💻 Ejemplos Rápidos de Integración</h2>
-                <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Usa el motor de rutas desde TypeScript, Electron o directamente desde la terminal</p>
+                <h2><i class="fa-solid fa-code"></i> Ejemplos rápidos de integración</h2>
+                <p>Usa el motor de rutas desde TypeScript, Electron o directamente desde la terminal</p>
             </div>
-            <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" style="color: var(--primary); font-size: 0.85rem; font-weight: 700; text-decoration: none;">
+            <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="section-link">
                 Ver documentación de la API <i class="fa-solid fa-arrow-right"></i>
             </a>
         </div>
 
         <div class="code-showcase">
             <div class="code-window-header">
-                <div class="code-window-left">
-                    <div class="window-dots">
-                        <div class="dot dot-red"></div>
-                        <div class="dot dot-yellow"></div>
-                        <div class="dot dot-green"></div>
-                    </div>
                     <div class="code-tabs">
                         <button class="code-tab-btn active" data-tab="ts" onclick="switchCodeTab('ts')">
-                            <i class="fa-brands fa-js" style="color: #3178c6;"></i> TypeScript (ESM)
+                            <i class="fa-brands fa-js"></i> TypeScript (ESM)
                         </button>
                         <button class="code-tab-btn" data-tab="cjs" onclick="switchCodeTab('cjs')">
-                            <i class="fa-brands fa-node-js" style="color: #68a063;"></i> Electron (persistente)
+                            <i class="fa-brands fa-node-js"></i> Electron (persistente)
                         </button>
                         <button class="code-tab-btn" data-tab="py" onclick="switchCodeTab('py')">
-                            <i class="fa-solid fa-terminal" style="color: #f59e0b;"></i> CLI (cli.exe)
+                            <i class="fa-solid fa-terminal"></i> CLI (cli.exe)
                         </button>
                         <button class="code-tab-btn" data-tab="json" onclick="switchCodeTab('json')">
-                            <i class="fa-solid fa-code" style="color: #38bdf8;"></i> Salida JSON
+                            <i class="fa-solid fa-code"></i> Salida JSON
                         </button>
                     </div>
-                </div>
                 <button class="btn-copy-code" id="btn-copy-code" onclick="copyActiveCode()">
-                    <i class="fa-regular fa-copy"></i> Copiar Código
+                    <i class="fa-regular fa-copy"></i> Copiar
                 </button>
             </div>
 

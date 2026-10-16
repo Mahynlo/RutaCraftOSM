@@ -68,7 +68,7 @@ body {
     font-size: 0.65rem;
     padding: 2px 8px;
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--cpp), var(--primary));
+    background: var(--primary);
     color: #ffffff;
     font-weight: 700;
     letter-spacing: 0.5px;
