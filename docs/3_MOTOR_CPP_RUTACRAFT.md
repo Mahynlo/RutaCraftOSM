@@ -54,7 +54,7 @@ Para cargar rápido (~35 ms el grafo de producción, ver [benchmark](./5_RENDIMI
 En lugar de calcular distancias contra todos los nodos del mapa (escaneo $O(N)$), la clase `KDTree` en [`kdtree.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/kdtree.hpp) organiza las coordenadas geográficas en un árbol binario 2D:
 
 * **Construcción**: Alterna particiones por `lat` (eje 0) y `lon` (eje 1) usando `std::nth_element` en $O(N \log N)$.
-* **Búsqueda del nodo más cercano**: Poda ramas completas del árbol comparando la distancia al plano divisor antes de descender.
+* **Búsqueda del nodo más cercano**: Poda ramas completas del árbol comparando la distancia al plano divisor antes de descender. Esa distancia se calcula como cota inferior exacta sobre la esfera (a lo largo del meridiano para un paralelo, $R \cdot \arcsin(\cos(\text{lat}) \cdot \sin(\Delta\text{lon}))$ para un meridiano), así que la poda nunca descarta la rama donde está el nodo más cercano. Una prueba compara el resultado con una búsqueda exhaustiva.
 * **Tiempo por consulta**: $< 0.05\text{ ms}$ (apenas 15 operaciones para un mapa de 25,000 nodos).
 
 ---
@@ -66,31 +66,36 @@ La clase `Enrutador` en [`astar.hpp`](https://github.com/Mahynlo/RutaCraftOSM/bl
 1. **Memoria Contigua**: Los arreglos `g_score`, `came_from` y `closed` son vectores contiguos (`std::vector<float>` y `std::vector<int>`) de tamaño $N$, indexados directamente por el ID interno del nodo ($0 \dots N-1$).
 2. **Min-Heap de Alto Rendimiento**: `std::priority_queue` sobre `std::pair<float, int>`.
 3. **Aproximación Euclidiana Equirrectangular**:
-   Para la heurística de distancia estimada al destino en distancias urbanas/municipales:
-   $$\Delta x = (\text{lon}_2 - \text{lon}_1) \cdot \cos(\text{lat}_{\text{media}}) \cdot 111320\text{ m}$$
-   $$\Delta y = (\text{lat}_2 - \text{lat}_1) \cdot 110574\text{ m}$$
-   $$d = \sqrt{\Delta x^2 + \Delta y^2}$$
-   *Es **5x a 8x más rápida** que Haversine completo y tiene un error insignificante ($< 0.05\%$).*
+   Para la heurística de distancia estimada al destino:
+   $$\Delta x = (\text{lon}_2 - \text{lon}_1) \cdot \cos(\text{lat}_{\text{media}}) \cdot \frac{\pi R}{180}$$
+   $$\Delta y = (\text{lat}_2 - \text{lat}_1) \cdot \frac{\pi R}{180}$$
+   $$h = 0.999 \cdot \sqrt{\Delta x^2 + \Delta y^2}, \quad R = 6{,}371{,}000\text{ m}$$
+   *Es **5x a 8x más rápida** que Haversine completo.*
+4. **Heurística admisible**: para que A\* garantice la ruta más corta, $h$ nunca debe superar la distancia real. Se usa el radio medio de la Tierra (menor que los 6,371,009 m con los que OSMnx mide las aristas) y un margen de 0.1%, mayor que el error máximo de la aproximación plana (~0.0125% a 400 km). Una prueba compara la distancia del motor con Dijkstra exacto en pares de nodos al azar.
 
 ---
 
 ## 5. Generación de Instrucciones de Navegación (*Turn-by-turn*)
 
-En [`instrucciones.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/instrucciones.hpp):
+En [`instrucciones.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/instrucciones.hpp) la ruta se describe por **tramos de calle**, no por segmento:
 
-1. **Cálculo del Ángulo de Giro**:
-   Por cada tramo $u \to v \to w$:
-   $$\text{giro} = (\text{rumbo}_{v \to w} - \text{rumbo}_{u \to v} + 360^\circ) \pmod{360^\circ}$$
-2. **Clasificación de Maniobras**:
-   * $\text{giro} < 30^\circ$ o $\text{giro} > 330^\circ$: `"Sigue recto"`
-   * $30^\circ \le \text{giro} \le 180^\circ$: `"Gira a la derecha"`
-   * $180^\circ < \text{giro} \le 330^\circ$: `"Gira a la izquierda"`
-3. **Primer tramo**: el tramo inicial (nodo 0 → nodo 1) no tiene giro previo y se emite como `"Sigue recto"`, de modo que la suma de las instrucciones cubre la ruta completa.
-4. **Consolidación Inteligente**:
-   Si dos pasos sucesivos tienen la misma acción y el mismo nombre de calle, se fusionan acumulando sus distancias y actualizando el punto de destino.
+1. **Agrupación por calle**: las aristas consecutivas con el mismo nombre de calle forman un solo tramo. Un tramo solo se divide si dentro de él hay un giro muy cerrado (más de 120°, por ejemplo una vuelta en U) o, en vías sin nombre, un giro de más de 45°.
+2. **Ángulo de giro suavizado**: el giro en el inicio de cada tramo se mide entre la dirección de los ~15 m anteriores y la de los ~15 m posteriores. Medirlo con un solo segmento daba ruido, porque con `simplify=False` hay segmentos de pocos metros. El rumbo escala la diferencia de longitud por $\cos(\text{lat})$.
+   $$\text{giro} = \text{rumbo}_{\text{salida}} - \text{rumbo}_{\text{entrada}} \in (-180^\circ, 180^\circ], \quad \text{positivo} = \text{derecha}$$
+3. **Tramos cortos**: los de menos de 15 m no generan instrucción propia. Una desviación corta entre dos tramos de la misma calle se une a esa calle; en otro caso se absorbe en el tramo siguiente.
+4. **Clasificación de maniobras** (por valor absoluto del giro):
 
-> [!NOTE]
-> Un giro y el `"Sigue recto"` que lo sigue en la misma calle no se fusionan, por lo que en zonas urbanas entre un 25% y un 41% de las instrucciones son redundantes (ver [5. Rendimiento](./5_RENDIMIENTO.md#3-instrucciones-de-navegación)).
+   | Giro | Acción |
+   | :--- | :--- |
+   | < 30° | `"Sigue recto"` |
+   | 30° – 60° | `"Gira ligeramente a la derecha"` / `"... a la izquierda"` |
+   | 60° – 135° | `"Gira a la derecha"` / `"Gira a la izquierda"` |
+   | 135° – 165° | `"Gira bruscamente a la derecha"` / `"... a la izquierda"` |
+   | ≥ 165° | `"Da vuelta en U"` |
+
+5. **Primer tramo**: se emite como `"Sigue recto"`. Las distancias de todas las instrucciones suman la ruta completa.
+
+Comparado con la versión anterior (que consolidaba segmento por segmento), las mismas rutas generan entre 40% y 50% menos instrucciones y ninguna de menos de 15 m; los detalles están en [5. Rendimiento](./5_RENDIMIENTO.md#3-instrucciones-de-navegación).
 
 ---
 

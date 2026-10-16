@@ -171,9 +171,7 @@ function renderInstructions() {
     const instrucciones = varianteActiva().instrucciones;
     const fragmento = document.createDocumentFragment();
     instrucciones.forEach((inst, i) => {
-        let iconClass = "fa-arrow-up";
-        if (inst.accion.includes("derecha")) iconClass = "fa-arrow-right";
-        if (inst.accion.includes("izquierda")) iconClass = "fa-arrow-left";
+        const iconClass = iconoAccion(inst.accion);
 
         const card = document.createElement('div');
         card.className = 'instruction-item';
@@ -385,6 +383,7 @@ function formatoDistancia(m) {
 }
 
 function iconoAccion(accion) {
+    if (accion.includes('vuelta en U')) return 'fa-arrow-rotate-left';
     if (accion.includes('derecha')) return 'fa-arrow-right';
     if (accion.includes('izquierda')) return 'fa-arrow-left';
     return 'fa-arrow-up';

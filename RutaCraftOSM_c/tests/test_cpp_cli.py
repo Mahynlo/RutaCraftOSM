@@ -278,6 +278,113 @@ class TestRobustez(unittest.TestCase):
         self.assertIn("error al interpretar puntos", result.stderr.lower())
 
 
+def leer_grafo_bin(ruta):
+    """Lee un grafo RCO1: devuelve (coordenadas, lista de adyacencia [(destino, peso)])."""
+    import struct
+    with open(ruta, "rb") as f:
+        d = f.read()
+    o = 4
+    n, = struct.unpack_from("<I", d, o)
+    o += 4
+    coords = []
+    for _ in range(n):
+        _, lat, lon = struct.unpack_from("<qdd", d, o)
+        o += 24
+        coords.append((lat, lon))
+    adj = [[] for _ in range(n)]
+    for u in range(n):
+        k, = struct.unpack_from("<I", d, o)
+        o += 4
+        for _ in range(k):
+            v, w = struct.unpack_from("<If", d, o)
+            o += 8
+            for _ in range(2):  # nombre de la calle y tipo de vía
+                largo, = struct.unpack_from("<H", d, o)
+                o += 2 + largo
+            adj[u].append((v, w))
+    return coords, adj
+
+
+def servir_muchas(puntos_por_peticion):
+    lineas = "\n".join(json.dumps({"id": i, "puntos": p}) for i, p in enumerate(puntos_por_peticion))
+    r = subprocess.run([SCRIPT_PATH, "--serve", "--sin-cache", "--grafo", GRAFO_PATH], input=lineas + "\n",
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+    return {x["id"]: x for x in map(json.loads, r.stdout.splitlines())}
+
+
+class TestAlgoritmo(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.coords, cls.adj = leer_grafo_bin(GRAFO_PATH)
+
+    def test_kdtree_devuelve_el_nodo_mas_cercano_exacto(self):
+        import random
+        rnd = random.Random(3)
+        lats = [c[0] for c in self.coords]
+        lons = [c[1] for c in self.coords]
+        puntos = [[rnd.uniform(min(lats), max(lats)), rnd.uniform(min(lons), max(lons))] for _ in range(150)]
+        respuestas = servir_muchas([[p, p] for p in puntos])
+        for i, p in enumerate(puntos):
+            esperado = min(haversine(p, c) for c in self.coords)
+            ajustado = respuestas[i]["resultado"]["ruta"][0]
+            self.assertAlmostEqual(haversine(p, ajustado), esperado, delta=0.01, msg=f"punto {p}")
+
+    def test_astar_da_la_distancia_optima(self):
+        import heapq
+        import random
+
+        def dijkstra(s, t):
+            dist = {s: 0.0}
+            cola = [(0.0, s)]
+            while cola:
+                d, u = heapq.heappop(cola)
+                if u == t:
+                    return d
+                if d > dist.get(u, math.inf):
+                    continue
+                for v, w in self.adj[u]:
+                    if d + w < dist.get(v, math.inf):
+                        dist[v] = d + w
+                        heapq.heappush(cola, (d + w, v))
+            return None
+
+        rnd = random.Random(11)
+        pares = [(rnd.randrange(len(self.coords)), rnd.randrange(len(self.coords))) for _ in range(40)]
+        respuestas = servir_muchas([[list(self.coords[s]), list(self.coords[t])] for s, t in pares])
+        for i, (s, t) in enumerate(pares):
+            optima = dijkstra(s, t)
+            if optima is None or not respuestas[i]["ok"]:
+                continue
+            motor = largo_polilinea(respuestas[i]["resultado"]["ruta"])
+            # Tolerancia: OSMnx mide las aristas con radio 6,371,009 m y haversine usa 6,371,000 m
+            self.assertLessEqual(motor, optima * (1 + 1e-5) + 0.5, msg=f"par {s} -> {t}")
+
+    def test_instrucciones_sin_redundancias(self):
+        import random
+        rnd = random.Random(5)
+        rutas = [[list(self.coords[rnd.randrange(len(self.coords))]) for _ in range(8)] for _ in range(15)]
+        with open(PUNTOS_MUNICIPIO, encoding="utf-8") as f:
+            rutas.append(json.load(f))
+        permitidas = {"Sigue recto", "Da vuelta en U"} | {
+            f"Gira {modo}a la {lado}" for modo in ("", "ligeramente ", "bruscamente ") for lado in ("derecha", "izquierda")}
+
+        for r in servir_muchas(rutas).values():
+            if not r["ok"]:
+                continue
+            ins = r["resultado"]["instrucciones"]
+            for i in ins:
+                self.assertIn(i["accion"], permitidas)
+            if len(ins) > 1:
+                self.assertTrue(all(i["distancia_m"] >= 15 for i in ins), "tramo corto sin absorber")
+            for a, b in zip(ins, ins[1:]):
+                # Dos instrucciones seguidas en la misma calle solo si hay una vuelta en U o un giro cerrado
+                if a["calle"] == b["calle"] and a["calle"] != "desconocida":
+                    self.assertIn(b["accion"], {"Da vuelta en U", "Gira bruscamente a la derecha",
+                                                "Gira bruscamente a la izquierda"})
+            self.assertAlmostEqual(sum(i["distancia_m"] for i in ins), r["resultado"]["distancia_total_m"],
+                                   delta=0.05 * len(ins) + 0.1)
+
+
 class TestParidadPython(unittest.TestCase):
     """El motor C++ debe producir la misma ruta y distancia que el motor de referencia en Python."""
 

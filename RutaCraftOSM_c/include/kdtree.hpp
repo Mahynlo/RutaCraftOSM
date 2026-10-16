@@ -60,8 +60,14 @@ private:
         }
 
         double diff = (nodo.axis == 0) ? (objetivo.lat - c.lat) : (objetivo.lon - c.lon);
-        // Estimación rápida de distancia mínima al plano divisor en metros
-        double diff_m = (nodo.axis == 0) ? (std::abs(diff) * 110574.0) : (std::abs(diff) * 111320.0 * std::cos(objetivo.lat * DEG_TO_RAD));
+        // Distancia mínima (gran círculo) del objetivo al plano divisor. Debe ser exacta o menor
+        // que la real: si la sobreestimara se podaría la rama donde está el nodo más cercano.
+        //  - Paralelo (lat = c): la distancia mínima es a lo largo del meridiano.
+        //  - Meridiano (lon = c): R * asin(cos(lat) * sin(Δlon)).
+        double diff_m = (nodo.axis == 0)
+            ? std::abs(diff) * METROS_POR_GRADO
+            : RADIO_TIERRA_M * std::asin(std::min(1.0, std::cos(objetivo.lat * DEG_TO_RAD) *
+                                                       std::sin(std::min(std::abs(diff), 90.0) * DEG_TO_RAD)));
 
         int primer_hijo = (diff <= 0) ? nodo.left : nodo.right;
         int segundo_hijo = (diff <= 0) ? nodo.right : nodo.left;

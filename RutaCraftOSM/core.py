@@ -19,7 +19,9 @@ def haversine(coord1, coord2): # Calcula la distancia entre dos coordenadas GPS
     return R * 2 * asin(sqrt(a))
 
 def angulo(a, b):
-    return degrees(atan2(b[1] - a[1], b[0] - a[0]))
+    # La diferencia de longitud se escala por cos(latitud) para obtener el rumbo real
+    lat_media = radians((a[0] + b[0]) / 2)
+    return degrees(atan2((b[1] - a[1]) * cos(lat_media), b[0] - a[0]))
 
 def buscar_nodo_mas_cercano(coords, lat, lon):
     """Busca el nodo más cercano a una coordenada GPS"""

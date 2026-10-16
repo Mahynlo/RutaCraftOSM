@@ -1,74 +1,73 @@
 {
-  "fecha": "2026-10-14",
+  "fecha": "2026-10-15",
   "cpu": "AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx",
   "sistema": "Windows 11",
   "grafos": [
     {
       "aristas": 98846,
-      "carga_ms": 31.9,
+      "carga_ms": 30.0,
       "escenarios": [
         {
-          "astar_ms": 0.014,
+          "astar_ms": 0.013,
+          "astar_nodos": 30,
           "distancia_km": 0.57,
           "instrucciones": {
-            "con_calle_desconocida": 7,
-            "derecha": 2,
+            "con_calle_desconocida": 3,
+            "derecha": 1,
             "izquierda": 1,
-            "m_por_instruccion": 81.9,
+            "m_por_instruccion": 191.2,
             "muestra": [
-              "Sigue recto en desconocida (492 m)",
-              "Gira a la derecha en desconocida (7 m)",
-              "Sigue recto en desconocida (6 m)",
-              "Gira a la izquierda en desconocida (6 m)",
-              "Sigue recto en desconocida (7 m)",
-              "Gira a la derecha en desconocida (5 m)"
+              "Sigue recto en desconocida (491 m)",
+              "Gira a la derecha en desconocida (19 m)",
+              "Gira a la izquierda en desconocida (62 m)"
             ],
             "pct_distancia_calle_desconocida": 100.0,
-            "recto": 4,
-            "total": 7
+            "recto": 1,
+            "total": 3
           },
           "nodos_ruta": 29,
           "nombre": "Ruta corta (3 paradas)",
           "puntos": 3,
           "snap_max_m": 34.3,
-          "snapping_ms": 0.016,
-          "total_ms": 0.075,
-          "total_ms_min": 0.072,
-          "proceso_cli_ms": 53.0
+          "snapping_ms": 0.02,
+          "total_ms": 0.063,
+          "total_ms_min": 0.058,
+          "proceso_cli_ms": 60.0
         },
         {
-          "astar_ms": 0.237,
+          "astar_ms": 0.228,
+          "astar_nodos": 479,
           "distancia_km": 14.71,
           "instrucciones": {
-            "con_calle_desconocida": 26,
-            "derecha": 13,
-            "izquierda": 13,
-            "m_por_instruccion": 306.4,
+            "con_calle_desconocida": 13,
+            "derecha": 9,
+            "izquierda": 10,
+            "m_por_instruccion": 612.8,
             "muestra": [
-              "Sigue recto en desconocida (492 m)",
-              "Gira a la derecha en desconocida (7 m)",
-              "Sigue recto en desconocida (6 m)",
-              "Gira a la izquierda en desconocida (6 m)",
-              "Sigue recto en desconocida (7 m)",
-              "Gira a la derecha en desconocida (5 m)"
+              "Sigue recto en desconocida (491 m)",
+              "Gira a la derecha en desconocida (19 m)",
+              "Gira a la izquierda en desconocida (122 m)",
+              "Gira a la izquierda en Calle Ignacio Soto (55 m)",
+              "Gira a la derecha en desconocida (43 m)",
+              "Gira a la izquierda en Calle Benito Juárez (295 m)"
             ],
             "pct_distancia_calle_desconocida": 92.0,
-            "recto": 22,
-            "total": 48
+            "recto": 5,
+            "total": 24
           },
           "nodos_ruta": 458,
           "nombre": "Ruta municipal (23 paradas)",
           "puntos": 23,
           "snap_max_m": 60.3,
-          "snapping_ms": 0.031,
-          "total_ms": 0.778,
-          "total_ms_min": 0.732,
-          "proceso_cli_ms": 55.6
+          "snapping_ms": 0.034,
+          "total_ms": 0.699,
+          "total_ms_min": 0.661,
+          "proceso_cli_ms": 58.2
         }
       ],
       "grafo": "grafo_mazatan_villapesqueira.bin",
-      "kdtree_ms": 3.8,
-      "memoria_pico_mb": 15.7,
+      "kdtree_ms": 3.7,
+      "memoria_pico_mb": 15.5,
       "nodos": 24465,
       "repeticiones": 5,
       "tamano_mb": 4.1,
@@ -76,128 +75,132 @@
     },
     {
       "aristas": 301916,
-      "carga_ms": 118.1,
+      "carga_ms": 118.7,
       "escenarios": [
         {
-          "astar_ms": 4.834,
+          "astar_ms": 4.562,
+          "astar_nodos": 367,
           "distancia_km": 14.9,
           "instrucciones": {
             "con_calle_desconocida": 1,
-            "derecha": 9,
-            "izquierda": 8,
-            "m_por_instruccion": 425.6,
+            "derecha": 7,
+            "izquierda": 7,
+            "m_por_instruccion": 709.3,
             "muestra": [
-              "Sigue recto en Margarita Maza de Juárez (1408 m)",
-              "Gira a la izquierda en Boulevard Lázaro Cárdenas (33 m)",
-              "Sigue recto en Boulevard Lázaro Cárdenas (184 m)",
-              "Gira a la derecha en Leonardo P Gaxiola (8 m)",
-              "Gira a la izquierda en Boulevard Lázaro Cárdenas (112 m)",
-              "Sigue recto en Boulevard Lázaro Cárdenas (459 m)"
+              "Sigue recto en Margarita Maza de Juárez (1409 m)",
+              "Gira ligeramente a la izquierda en Boulevard Lázaro Cárdenas (798 m)",
+              "Gira a la derecha en Boulevard Olivares (2895 m)",
+              "Sigue recto en Olivares (2182 m)",
+              "Gira ligeramente a la derecha en desconocida (33 m)",
+              "Gira a la izquierda en Doctor Paliza (26 m)"
             ],
-            "pct_distancia_calle_desconocida": 0.3,
-            "recto": 18,
-            "total": 35
+            "pct_distancia_calle_desconocida": 0.2,
+            "recto": 7,
+            "total": 21
           },
           "nodos_ruta": 367,
           "nombre": "Cruce norte-sur (2 puntos)",
           "puntos": 2,
           "snap_max_m": 285.1,
-          "snapping_ms": 0.02,
-          "total_ms": 5.383,
-          "total_ms_min": 5.285,
-          "proceso_cli_ms": 168.8
+          "snapping_ms": 0.025,
+          "total_ms": 5.153,
+          "total_ms_min": 5.073,
+          "proceso_cli_ms": 185.5
         },
         {
-          "astar_ms": 2.508,
+          "astar_ms": 2.403,
+          "astar_nodos": 273,
           "distancia_km": 10.47,
           "instrucciones": {
-            "con_calle_desconocida": 1,
+            "con_calle_desconocida": 2,
             "derecha": 5,
-            "izquierda": 5,
-            "m_por_instruccion": 436.3,
+            "izquierda": 7,
+            "m_por_instruccion": 551.1,
             "muestra": [
               "Sigue recto en Rosales (35 m)",
               "Sigue recto en Calle Rosales (323 m)",
               "Gira a la izquierda en Boulevard Miguel Hidalgo y Costilla (44 m)",
-              "Gira a la derecha en Calle Pedro Moreno (4 m)",
-              "Sigue recto en Calle Pedro Moreno (68 m)",
-              "Gira a la izquierda en Ignacio Pesqueira (10 m)"
+              "Gira a la derecha en Calle Pedro Moreno (72 m)",
+              "Gira a la izquierda en Ignacio Pesqueira (117 m)",
+              "Sigue recto en Avenida Doctor Ignacio Pesqueira (1792 m)"
             ],
             "pct_distancia_calle_desconocida": 2.9,
-            "recto": 14,
-            "total": 24
+            "recto": 7,
+            "total": 19
           },
           "nodos_ruta": 273,
           "nombre": "Centro al aeropuerto (2 puntos)",
           "puntos": 2,
           "snap_max_m": 394.9,
           "snapping_ms": 0.013,
-          "total_ms": 2.901,
-          "total_ms_min": 2.824,
-          "proceso_cli_ms": 176.8
+          "total_ms": 2.844,
+          "total_ms_min": 2.809,
+          "proceso_cli_ms": 171.8
         },
         {
-          "astar_ms": 1.085,
+          "astar_ms": 0.999,
+          "astar_nodos": 817,
           "distancia_km": 32.02,
           "instrucciones": {
-            "con_calle_desconocida": 19,
-            "derecha": 58,
-            "izquierda": 74,
-            "m_por_instruccion": 122.7,
+            "con_calle_desconocida": 14,
+            "derecha": 43,
+            "izquierda": 87,
+            "m_por_instruccion": 206.6,
             "muestra": [
               "Sigue recto en Calle de la Reforma (605 m)",
-              "Gira a la izquierda en Luis Encinas Johnson (10 m)",
-              "Sigue recto en Luis Encinas Johnson (333 m)",
-              "Gira a la derecha en 14 de Abril (8 m)",
-              "Sigue recto en 14 de Abril (17 m)",
-              "Gira a la izquierda en Luis Encinas Johnson (5 m)"
+              "Gira ligeramente a la izquierda en Luis Encinas Johnson (343 m)",
+              "Gira ligeramente a la derecha en 14 de Abril (26 m)",
+              "Gira ligeramente a la izquierda en Luis Encinas Johnson (228 m)",
+              "Gira a la derecha en Américas (217 m)",
+              "Gira a la izquierda en Nayarit (141 m)"
             ],
-            "pct_distancia_calle_desconocida": 4.9,
-            "recto": 129,
-            "total": 261
+            "pct_distancia_calle_desconocida": 4.8,
+            "recto": 25,
+            "total": 155
           },
-          "nodos_ruta": 795,
+          "nodos_ruta": 794,
           "nombre": "Ruta de lectura en una colonia (25 paradas)",
           "puntos": 25,
           "snap_max_m": 163.1,
-          "snapping_ms": 0.056,
-          "total_ms": 3.271,
-          "total_ms_min": 2.879,
-          "proceso_cli_ms": 170.3
+          "snapping_ms": 0.058,
+          "total_ms": 2.268,
+          "total_ms_min": 2.225,
+          "proceso_cli_ms": 168.0
         },
         {
-          "astar_ms": 93.351,
+          "astar_ms": 100.143,
+          "astar_nodos": 10478,
           "distancia_km": 441.34,
           "instrucciones": {
-            "con_calle_desconocida": 418,
-            "derecha": 367,
-            "izquierda": 382,
-            "m_por_instruccion": 286.6,
+            "con_calle_desconocida": 224,
+            "derecha": 249,
+            "izquierda": 443,
+            "m_por_instruccion": 512.0,
             "muestra": [
               "Sigue recto en desconocida (327 m)",
-              "Gira a la derecha en Boulevard Enrique Mazón López (76 m)",
-              "Sigue recto en Boulevard Enrique Mazón López (1527 m)",
+              "Gira a la derecha en Boulevard Enrique Mazón López (1604 m)",
               "Sigue recto en desconocida (45 m)",
-              "Gira a la derecha en Carretera Internacional (33 m)",
-              "Sigue recto en Carretera Internacional (1111 m)"
+              "Gira ligeramente a la derecha en Carretera Internacional (1145 m)",
+              "Sigue recto en Boulevard Enrique Mazón López (1762 m)",
+              "Gira a la izquierda en desconocida (67 m)"
             ],
             "pct_distancia_calle_desconocida": 13.5,
-            "recto": 791,
-            "total": 1540
+            "recto": 170,
+            "total": 862
           },
           "nodos_ruta": 10430,
           "nombre": "Recorrido por toda la ciudad (50 paradas)",
           "puntos": 50,
           "snap_max_m": 1139.6,
-          "snapping_ms": 0.233,
-          "total_ms": 108.827,
-          "total_ms_min": 104.435,
-          "proceso_cli_ms": 272.7
+          "snapping_ms": 0.244,
+          "total_ms": 124.618,
+          "total_ms_min": 119.785,
+          "proceso_cli_ms": 290.3
         }
       ],
       "grafo": "grafo_hermosillo.bin",
-      "kdtree_ms": 15.2,
-      "memoria_pico_mb": 46.7,
+      "kdtree_ms": 14.5,
+      "memoria_pico_mb": 45.3,
       "nodos": 74839,
       "repeticiones": 5,
       "tamano_mb": 13.5,
@@ -205,128 +208,132 @@
     },
     {
       "aristas": 150958,
-      "carga_ms": 122.5,
+      "carga_ms": 77.1,
       "escenarios": [
         {
-          "astar_ms": 6.821,
+          "astar_ms": 4.016,
+          "astar_nodos": 348,
           "distancia_km": 15.03,
           "instrucciones": {
-            "con_calle_desconocida": 2,
-            "derecha": 11,
+            "con_calle_desconocida": 1,
+            "derecha": 8,
             "izquierda": 7,
-            "m_por_instruccion": 406.3,
+            "m_por_instruccion": 715.9,
             "muestra": [
-              "Sigue recto en Margarita Maza de Juárez (1303 m)",
-              "Gira a la derecha en Margarita Maza de Juárez (9 m)",
-              "Sigue recto en Margarita Maza de Juárez (13 m)",
+              "Sigue recto en Margarita Maza de Juárez (1326 m)",
               "Gira a la derecha en Boulevard Lázaro Cárdenas (44 m)",
-              "Gira a la izquierda en desconocida (9 m)",
-              "Sigue recto en desconocida (29 m)"
+              "Gira ligeramente a la izquierda en desconocida (39 m)",
+              "Gira ligeramente a la izquierda en Boulevard Lázaro Cárdenas (650 m)",
+              "Gira a la derecha en Calle López del Castillo (2976 m)",
+              "Gira a la izquierda en Luis Encinas Johnson (208 m)"
             ],
             "pct_distancia_calle_desconocida": 0.3,
-            "recto": 19,
-            "total": 37
+            "recto": 6,
+            "total": 21
           },
           "nodos_ruta": 348,
           "nombre": "Cruce norte-sur (2 puntos)",
           "puntos": 2,
           "snap_max_m": 285.1,
-          "snapping_ms": 0.044,
-          "total_ms": 6.815,
-          "total_ms_min": 5.989,
-          "proceso_cli_ms": 130.1
+          "snapping_ms": 0.029,
+          "total_ms": 4.944,
+          "total_ms_min": 4.032,
+          "proceso_cli_ms": 120.5
         },
         {
-          "astar_ms": 2.924,
+          "astar_ms": 1.379,
+          "astar_nodos": 307,
           "distancia_km": 11.04,
           "instrucciones": {
-            "con_calle_desconocida": 6,
-            "derecha": 7,
-            "izquierda": 5,
-            "m_por_instruccion": 394.2,
+            "con_calle_desconocida": 5,
+            "derecha": 6,
+            "izquierda": 6,
+            "m_por_instruccion": 581.0,
             "muestra": [
               "Sigue recto en Rosales (258 m)",
-              "Gira a la derecha en desconocida (5 m)",
-              "Sigue recto en desconocida (163 m)",
-              "Sigue recto en Francisco Serna (728 m)",
+              "Gira a la derecha en desconocida (168 m)",
+              "Sigue recto en Francisco Serna (727 m)",
               "Sigue recto en Boulevard Francisco Serna (723 m)",
-              "Gira a la derecha en Boulevard Solidaridad (13 m)"
+              "Gira ligeramente a la derecha en Boulevard Solidaridad (1387 m)",
+              "Gira a la derecha en desconocida (366 m)"
             ],
             "pct_distancia_calle_desconocida": 12.2,
-            "recto": 16,
-            "total": 28
+            "recto": 7,
+            "total": 19
           },
           "nodos_ruta": 307,
           "nombre": "Centro al aeropuerto (2 puntos)",
           "puntos": 2,
           "snap_max_m": 394.9,
-          "snapping_ms": 0.018,
-          "total_ms": 3.019,
-          "total_ms_min": 2.491,
-          "proceso_cli_ms": 118.6
+          "snapping_ms": 0.015,
+          "total_ms": 1.791,
+          "total_ms_min": 1.455,
+          "proceso_cli_ms": 122.7
         },
         {
-          "astar_ms": 2.318,
+          "astar_ms": 0.933,
+          "astar_nodos": 874,
           "distancia_km": 35.9,
           "instrucciones": {
-            "con_calle_desconocida": 14,
-            "derecha": 64,
-            "izquierda": 79,
-            "m_por_instruccion": 130.1,
+            "con_calle_desconocida": 9,
+            "derecha": 55,
+            "izquierda": 85,
+            "m_por_instruccion": 225.8,
             "muestra": [
               "Sigue recto en Calle de la Reforma (630 m)",
-              "Gira a la izquierda en Luis Encinas Johnson (5 m)",
-              "Sigue recto en Luis Encinas Johnson (572 m)",
-              "Gira a la derecha en Américas (13 m)",
-              "Sigue recto en Américas (204 m)",
-              "Gira a la izquierda en Nayarit (39 m)"
+              "Gira ligeramente a la izquierda en Luis Encinas Johnson (578 m)",
+              "Gira a la derecha en Américas (217 m)",
+              "Gira a la izquierda en Nayarit (195 m)",
+              "Gira a la izquierda en Gandara (65 m)",
+              "Gira a la izquierda en desconocida (143 m)"
             ],
             "pct_distancia_calle_desconocida": 1.7,
-            "recto": 133,
-            "total": 276
+            "recto": 19,
+            "total": 159
           },
           "nodos_ruta": 851,
           "nombre": "Ruta de lectura en una colonia (25 paradas)",
           "puntos": 25,
           "snap_max_m": 163.1,
-          "snapping_ms": 0.089,
-          "total_ms": 5.418,
-          "total_ms_min": 3.89,
-          "proceso_cli_ms": 118.2
+          "snapping_ms": 0.075,
+          "total_ms": 2.377,
+          "total_ms_min": 2.105,
+          "proceso_cli_ms": 116.6
         },
         {
-          "astar_ms": 106.946,
+          "astar_ms": 95.229,
+          "astar_nodos": 11079,
           "distancia_km": 459.4,
           "instrucciones": {
-            "con_calle_desconocida": 406,
-            "derecha": 350,
-            "izquierda": 360,
-            "m_por_instruccion": 311.9,
+            "con_calle_desconocida": 222,
+            "derecha": 248,
+            "izquierda": 421,
+            "m_por_instruccion": 548.2,
             "muestra": [
               "Sigue recto en desconocida (327 m)",
-              "Gira a la derecha en Boulevard Enrique Mazón López (76 m)",
-              "Sigue recto en Boulevard Enrique Mazón López (6332 m)",
-              "Sigue recto en Bulevard Eusebio Kino (12 m)",
-              "Gira a la izquierda en desconocida (17 m)",
-              "Sigue recto en Periferico Oriente (978 m)"
+              "Gira a la derecha en Boulevard Enrique Mazón López (6408 m)",
+              "Sigue recto en desconocida (29 m)",
+              "Sigue recto en Periferico Oriente (978 m)",
+              "Sigue recto en Circunvalacion (648 m)",
+              "Gira a la izquierda en Nueva Circunvalacion (587 m)"
             ],
-            "pct_distancia_calle_desconocida": 14.9,
-            "recto": 763,
-            "total": 1473
+            "pct_distancia_calle_desconocida": 14.8,
+            "recto": 169,
+            "total": 838
           },
           "nodos_ruta": 11031,
           "nombre": "Recorrido por toda la ciudad (50 paradas)",
           "puntos": 50,
           "snap_max_m": 1139.6,
-          "snapping_ms": 0.294,
-          "total_ms": 115.376,
-          "total_ms_min": 101.732,
-          "proceso_cli_ms": 225.2
+          "snapping_ms": 0.39,
+          "total_ms": 109.293,
+          "total_ms_min": 106.178,
+          "proceso_cli_ms": 246.0
         }
       ],
       "grafo": "grafo_hermosillo_dirigido.bin",
-      "kdtree_ms": 21.1,
-      "memoria_pico_mb": 34.2,
+      "kdtree_ms": 16.2,
+      "memoria_pico_mb": 33.0,
       "nodos": 74839,
       "repeticiones": 5,
       "tamano_mb": 7.8,
