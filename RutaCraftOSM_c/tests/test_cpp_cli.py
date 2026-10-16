@@ -2,6 +2,7 @@ import unittest
 import subprocess
 import json
 import math
+import shutil
 import os
 import sys
 import tempfile
@@ -188,6 +189,93 @@ class TestCppServidor(unittest.TestCase):
             self.servir([json.dumps({"id": 1, "puntos": TRES_PUNTOS})], ["--cache", cache_path])
             with open(cache_path, encoding="utf-8") as f:
                 self.assertEqual(len(json.load(f)), 2)
+
+
+class TestRobustez(unittest.TestCase):
+    """Casos que fallaban en instalaciones reales: rutas con acentos, caché obsoleto y muchos puntos."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def correr(self, exe, args, entrada=None, cwd=None):
+        return subprocess.run([exe] + args, input=entrada, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True, encoding="utf-8", cwd=cwd or self.tmp.name)
+
+    def test_instalacion_en_carpeta_de_usuario_con_acentos(self):
+        # Como queda la app instalada por electron-builder para un usuario "José Muñoz"
+        bin_dir = os.path.join(self.tmp.name, "José Muñoz", "AppData", "Programs", "aguavp", "bin")
+        os.makedirs(os.path.join(bin_dir, "grafos"))
+        exe = os.path.join(bin_dir, os.path.basename(SCRIPT_PATH))
+        shutil.copy(SCRIPT_PATH, exe)
+        shutil.copy(GRAFO_PATH, os.path.join(bin_dir, "grafos", "grafo_mazatan_villapesqueira.bin"))
+
+        result = self.correr(exe, ["--sin-cache", "--puntos", JSON_STRING])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertGreater(json.loads(result.stdout)["distancia_total_m"], 0)
+
+    def test_grafo_cache_y_salida_en_rutas_con_acentos(self):
+        carpeta = os.path.join(self.tmp.name, "Año señal ñandú")
+        os.makedirs(carpeta)
+        grafo = os.path.join(carpeta, "grafo_peñasco.bin")
+        shutil.copy(GRAFO_PATH, grafo)
+        cache = os.path.join(carpeta, "caché.json")
+        salida = os.path.join(carpeta, "ruta_señal.json")
+
+        result = self.correr(SCRIPT_PATH, ["--grafo", grafo, "--cache", cache, "--salida", salida,
+                                           "--puntos", json.dumps(TRES_PUNTOS)])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(os.path.exists(cache))
+        with open(salida, encoding="utf-8") as f:
+            self.assertGreater(json.load(f)["distancia_total_m"], 0)
+
+    def test_cache_obsoleto_se_recalcula(self):
+        cache = os.path.join(self.tmp.name, "cache.json")
+        args = ["--grafo", GRAFO_PATH, "--cache", cache, "--puntos", JSON_STRING]
+        normal = json.loads(self.correr(SCRIPT_PATH, args).stdout)
+
+        # Simula un caché de un grafo anterior: el tramo pasa por un nodo que ya no existe
+        with open(cache, encoding="utf-8") as f:
+            datos = json.load(f)
+        clave = next(iter(datos))
+        datos[clave] = [datos[clave][0], "999999999999", datos[clave][-1]]
+        with open(cache, "w", encoding="utf-8") as f:
+            json.dump(datos, f)
+
+        result = self.correr(SCRIPT_PATH, args)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["ruta"], normal["ruta"])
+        with open(cache, encoding="utf-8") as f:
+            self.assertNotIn("999999999999", json.load(f)[clave])  # El caché quedó corregido
+
+    def test_cache_con_nodos_no_conectados_se_recalcula(self):
+        cache = os.path.join(self.tmp.name, "cache.json")
+        args = ["--grafo", GRAFO_PATH, "--cache", cache, "--puntos", JSON_STRING]
+        normal = json.loads(self.correr(SCRIPT_PATH, args).stdout)
+
+        with open(cache, encoding="utf-8") as f:
+            datos = json.load(f)
+        clave = next(iter(datos))
+        datos[clave] = [datos[clave][0], datos[clave][-1]]  # Nodos que existen pero no son vecinos
+        with open(cache, "w", encoding="utf-8") as f:
+            json.dump(datos, f)
+
+        result = self.correr(SCRIPT_PATH, args)
+        self.assertEqual(json.loads(result.stdout)["ruta"], normal["ruta"])
+
+    def test_muchos_puntos_por_stdin(self):
+        # Con --array, 1,500 puntos superan el límite de ~32 KB de la línea de comandos de Windows
+        puntos = [[29.06 + (i % 40) * 0.0003, -110.06 + (i // 40) * 0.0003] for i in range(2000)]
+        result = self.correr(SCRIPT_PATH, ["--grafo", GRAFO_PATH, "--sin-cache", "--puntos", "-"],
+                             entrada=json.dumps(puntos))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(json.loads(result.stdout)["puntos_gps"]), 2000)
+
+    def test_puntos_por_stdin_invalidos(self):
+        result = self.correr(SCRIPT_PATH, ["--grafo", GRAFO_PATH, "--sin-cache", "--puntos", "-"],
+                             entrada="esto no es json")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("error al interpretar puntos", result.stderr.lower())
 
 
 class TestParidadPython(unittest.TestCase):

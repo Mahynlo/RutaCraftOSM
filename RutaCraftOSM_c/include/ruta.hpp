@@ -5,6 +5,7 @@
 #include "instrucciones.hpp"
 #include "cache.hpp"
 #include "json.hpp"
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -13,6 +14,28 @@
 namespace rutacraft {
 
 using json = nlohmann::json;
+
+// Convierte un tramo guardado en caché (OSM IDs) a índices del grafo actual. Devuelve vacío si
+// el tramo no es un camino válido de u a v en este grafo: por ejemplo, si el grafo se regeneró y
+// el caché quedó con nodos que ya no existen o que ya no están conectados.
+inline std::vector<int> tramo_desde_cache(const Grafo& grafo, const std::vector<int64_t>& ruta_osm, int u, int v) {
+    std::vector<int> tramo;
+    tramo.reserve(ruta_osm.size());
+    for (int64_t osm_id : ruta_osm) {
+        auto it = grafo.osm_to_idx.find(osm_id);
+        if (it == grafo.osm_to_idx.end()) return {};
+        tramo.push_back(it->second);
+    }
+    if (tramo.empty() || tramo.front() != u || tramo.back() != v) return {};
+
+    for (size_t k = 1; k < tramo.size(); ++k) {
+        const auto& aristas = grafo.adj_list[tramo[k - 1]];
+        bool conectado = std::any_of(aristas.begin(), aristas.end(),
+                                     [&](const Arista& a) { return a.destino == tramo[k]; });
+        if (!conectado) return {};
+    }
+    return tramo;
+}
 
 // Calcula la ruta multi-parada completa. Lanza std::runtime_error si no es posible.
 inline json calcular_ruta(const Grafo& grafo, const KDTree& kdtree, GestorCache& cache_gestor,
@@ -51,13 +74,13 @@ inline json calcular_ruta(const Grafo& grafo, const KDTree& kdtree, GestorCache&
 
         auto en_cache = cache_gestor.cache.find(clave);
         if (en_cache != cache_gestor.cache.end()) {
-            for (int64_t osm_id : en_cache->second) {
-                auto it = grafo.osm_to_idx.find(osm_id);
-                if (it != grafo.osm_to_idx.end()) {
-                    segmento.push_back(it->second);
-                }
+            segmento = tramo_desde_cache(grafo, en_cache->second, u, v);
+            if (segmento.empty()) {
+                cache_gestor.cache.erase(en_cache);  // Tramo inválido para este grafo: se recalcula
             }
-        } else {
+        }
+
+        if (segmento.empty()) {
             segmento = Enrutador::astar(grafo, u, v);
             if (!segmento.empty()) {
                 std::vector<int64_t> ruta_osm;

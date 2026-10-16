@@ -24,7 +24,9 @@ add_executable(benchmark EXCLUDE_FROM_ALL bench/benchmark.cpp)
 target_include_directories(benchmark PRIVATE include)
 set_target_properties(benchmark PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 if(WIN32)
-    target_link_libraries(benchmark PRIVATE psapi)
+    # shell32: CommandLineToArgvW (argumentos Unicode); psapi: memoria del proceso en el benchmark
+    target_link_libraries(cli PRIVATE shell32)
+    target_link_libraries(benchmark PRIVATE shell32 psapi)
 endif()
 
 foreach(target cli benchmark)

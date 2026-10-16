@@ -92,24 +92,30 @@ export function calcularRuta(options: CalcularRutaOptions): Promise<RespuestaRut
     }
 
     const exePath = getCliExePath();
-    const args: string[] = ["--stdout", ...argsComunes(options.grafo, options.cachePath, options.saveCache)];
-
-    args.push("--array");
-    args.push(...options.puntos.flatMap(([lat, lon]) => [lat.toString(), lon.toString()]));
+    // Los puntos van por stdin (--puntos -): como argumentos, Windows limita la línea de
+    // comandos a ~32 KB y fallaba con más de ~1,300 puntos (spawn ENAMETOOLONG)
+    const args: string[] = ["--stdout", ...argsComunes(options.grafo, options.cachePath, options.saveCache), "--puntos", "-"];
 
     return new Promise((resolve, reject) => {
-        const proc = spawn(exePath, args);
+        const proc = spawn(exePath, args, { windowsHide: true });
 
         let out = "";
         let err = "";
+
+        // Si el motor termina antes de leer stdin, el error (EPIPE) se reporta por "close"
+        proc.stdin.on("error", () => {});
+        proc.stdin.end(JSON.stringify(options.puntos));
 
         const timer = setTimeout(() => {
             proc.kill();
             reject(new Error(`❌ El cálculo de ruta superó ${options.timeoutMs ?? TIMEOUT_DEFAULT_MS} ms`));
         }, options.timeoutMs ?? TIMEOUT_DEFAULT_MS);
 
-        proc.stdout.on("data", (data: Buffer) => out += data.toString());
-        proc.stderr.on("data", (data: Buffer) => err += data.toString());
+        // setEncoding evita partir un carácter UTF-8 (p. ej. "á" en un nombre de calle) entre dos fragmentos
+        proc.stdout.setEncoding("utf8");
+        proc.stderr.setEncoding("utf8");
+        proc.stdout.on("data", (data: string) => out += data);
+        proc.stderr.on("data", (data: string) => err += data);
 
         proc.on("close", (code: number) => {
             clearTimeout(timer);
@@ -200,10 +206,14 @@ export class MotorRutas {
         }
 
         const { grafo, cachePath, saveCache } = this.opciones;
-        const proc = spawn(getCliExePath(), ["--serve", ...argsComunes(grafo, cachePath, saveCache)]);
+        const proc = spawn(getCliExePath(), ["--serve", ...argsComunes(grafo, cachePath, saveCache)], { windowsHide: true });
         this.proc = proc;
         this.bufferSalida = "";
         this.bufferError = "";
+
+        // Escribir a un motor que ya terminó da EPIPE; sin este manejador tumbaría el proceso de Node/Electron.
+        // Las peticiones pendientes se rechazan en el evento "exit".
+        proc.stdin.on("error", () => {});
 
         proc.stdout.setEncoding("utf8");
         proc.stdout.on("data", (chunk: string) => this.procesarSalida(chunk));

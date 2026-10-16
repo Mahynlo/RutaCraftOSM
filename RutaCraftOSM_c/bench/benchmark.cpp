@@ -154,6 +154,7 @@ int main(int argc, char* argv[]) {
         double distancia_m = resultado["distancia_total_m"];
 
         j["astar_ms"] = redondear(mediana(astar_ms));
+        j["astar_nodos"] = nodos_ruta;  // Consumir el resultado evita que el compilador elimine las llamadas medidas
         j["total_ms"] = redondear(mediana(total_ms));
         j["total_ms_min"] = redondear(*std::min_element(total_ms.begin(), total_ms.end()));
         j["distancia_km"] = redondear(distancia_m / 1000.0, 2);

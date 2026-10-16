@@ -7,56 +7,50 @@
 #include "../include/cache.hpp"
 #include "../include/json.hpp"
 #include "../include/ruta.hpp"
+#include "../include/archivos.hpp"
 
 #include <iostream>
 #include <fstream>
+#include <iterator>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <filesystem>
 #include <iomanip>
 #include <stdexcept>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 using namespace rutacraft;
 
-std::string obtener_directorio_ejecutable() {
-#ifdef _WIN32
-    char buffer[MAX_PATH];
-    GetModuleFileNameA(NULL, buffer, MAX_PATH);
-    return fs::path(buffer).parent_path().string();
-#else
-    std::error_code ec;
-    fs::path exe = fs::read_symlink("/proc/self/exe", ec);
-    return ec ? fs::current_path().string() : exe.parent_path().string();
-#endif
+fs::path obtener_directorio_ejecutable() {
+    fs::path exe = ruta_ejecutable();
+    if (exe.empty()) {
+        std::error_code ec;
+        return fs::current_path(ec);
+    }
+    return exe.parent_path();
 }
 
-std::string resolver_ruta_grafo(const std::string& ruta_relativa) {
-    if (fs::exists(ruta_relativa)) return ruta_relativa;
+// Busca el grafo en el directorio actual, junto al ejecutable y en grafos/ (rutas en UTF-8)
+fs::path resolver_ruta_grafo(const std::string& ruta_utf8_grafo) {
+    const fs::path ruta = ruta_utf8(ruta_utf8_grafo);
+    const fs::path exe_dir = obtener_directorio_ejecutable();
+    fs::path base_bin = ruta.stem();
+    base_bin += ".bin";
 
-    std::string exe_dir = obtener_directorio_ejecutable();
-    fs::path p1 = fs::path(exe_dir) / ruta_relativa;
-    if (fs::exists(p1)) return p1.string();
+    for (const fs::path& candidato : {
+             ruta, exe_dir / ruta, exe_dir / "grafos" / ruta, fs::path("grafos") / ruta,
+             base_bin, exe_dir / base_bin, exe_dir / "grafos" / base_bin, fs::path("grafos") / base_bin}) {
+        if (existe(candidato)) return candidato;
+    }
+    return ruta;
+}
 
-    fs::path p2 = fs::path(exe_dir) / "grafos" / ruta_relativa;
-    if (fs::exists(p2)) return p2.string();
-
-    fs::path p3 = fs::path("grafos") / ruta_relativa;
-    if (fs::exists(p3)) return p3.string();
-
-    // Probar cambiando extensión a .bin si no existe
-    std::string base_bin = fs::path(ruta_relativa).stem().string() + ".bin";
-    if (fs::exists(base_bin)) return base_bin;
-    if (fs::exists(fs::path(exe_dir) / base_bin)) return (fs::path(exe_dir) / base_bin).string();
-    if (fs::exists(fs::path(exe_dir) / "grafos" / base_bin)) return (fs::path(exe_dir) / "grafos" / base_bin).string();
-    if (fs::exists(fs::path("grafos") / base_bin)) return (fs::path("grafos") / base_bin).string();
-
-    return ruta_relativa;
+std::string leer_stdin_completo() {
+    std::ostringstream contenido;
+    contenido << std::cin.rdbuf();
+    return contenido.str();
 }
 
 inline bool es_opcion_cli(const std::string& s) {
@@ -105,7 +99,21 @@ int ejecutar_servidor(const Grafo& grafo, const KDTree& kdtree, GestorCache& cac
     return 0;
 }
 
+int ejecutar(const std::vector<std::string>& argv);
+
 int main(int argc, char* argv[]) {
+    // Cualquier excepción no prevista termina con un mensaje y código 1, nunca con std::terminate
+    try {
+        return ejecutar(argumentos_utf8(argc, argv));
+    } catch (const std::exception& e) {
+        std::cerr << "Error(py): " << e.what() << "\n";
+        return 1;
+    }
+}
+
+// argv: argumentos en UTF-8, sin el nombre del programa
+int ejecutar(const std::vector<std::string>& argv) {
+    const int argc = static_cast<int>(argv.size());
     std::string grafo_path = "grafo_mazatan_villapesqueira.bin";
     std::string puntos_arg = "";
     std::vector<double> array_coords;
@@ -118,7 +126,7 @@ int main(int argc, char* argv[]) {
     bool modo_servidor = false;
 
     // Parseo de argumentos CLI
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 0; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--grafo" && i + 1 < argc) {
             grafo_path = argv[++i];
@@ -171,8 +179,11 @@ int main(int argc, char* argv[]) {
     } else if (!puntos_arg.empty()) {
         try {
             json j_puntos;
-            if (fs::exists(puntos_arg)) {
-                std::ifstream f(puntos_arg);
+            if (puntos_arg == "-") {
+                // Puntos por stdin: evita el límite de longitud de la línea de comandos (~32 KB en Windows)
+                j_puntos = json::parse(leer_stdin_completo());
+            } else if (existe(ruta_utf8(puntos_arg))) {
+                std::ifstream f(ruta_utf8(puntos_arg));
                 j_puntos = json::parse(f);
             } else {
                 j_puntos = json::parse(puntos_arg);
@@ -193,10 +204,10 @@ int main(int argc, char* argv[]) {
     }
 
     // Cargar Grafo
-    std::string ruta_real_grafo = resolver_ruta_grafo(grafo_path);
+    const fs::path ruta_real_grafo = resolver_ruta_grafo(grafo_path);
     Grafo grafo;
     if (!CargadorGrafo::cargar(ruta_real_grafo, grafo)) {
-        std::cerr << "Error(py): El archivo '" << ruta_real_grafo << "' no existe o formato no valido.\n";
+        std::cerr << "Error(py): El archivo '" << a_utf8(ruta_real_grafo) << "' no existe o formato no valido.\n";
         return 1;
     }
 
@@ -238,7 +249,7 @@ int main(int argc, char* argv[]) {
 
     // Guardar archivo de salida si se solicitó
     if (!salida_path.empty()) {
-        std::ofstream file_out(salida_path);
+        std::ofstream file_out(ruta_utf8(salida_path));
         if (file_out.is_open()) {
             file_out << resultado.dump(2);
         }

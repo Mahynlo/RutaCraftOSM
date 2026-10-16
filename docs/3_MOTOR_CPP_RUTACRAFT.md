@@ -141,7 +141,7 @@ $grafo = "..\RutaCraftOSM\grafos\grafo_mazatan_villapesqueira.bin"
 | Opción | Descripción |
 | :--- | :--- |
 | `--array lat lon ...` | Coordenadas en pares. Un número impar de valores es un error. |
-| `--puntos <archivo o JSON>` | Ruta a un archivo JSON o un string JSON con `[[lat, lon], ...]`. |
+| `--puntos <archivo o JSON>` | Ruta a un archivo JSON o un string JSON con `[[lat, lon], ...]`. Con `--puntos -` los puntos se leen de stdin, sin límite de cantidad (es lo que usa `calcularRuta()`). |
 | `--grafo <ruta>` | Grafo `.bin` (o `.json`). Por defecto `grafo_mazatan_villapesqueira.bin`; se busca en el directorio actual, junto al ejecutable y en `grafos/`. |
 | `--salida <archivo>` | Guarda el resultado en un archivo en lugar de imprimirlo. |
 | `--stdout` | Imprime `{"resultado": ..., "cache": ...}` (formato que usa `calcularRuta()`). Sin esta opción se imprime solo el resultado. |
@@ -149,5 +149,9 @@ $grafo = "..\RutaCraftOSM\grafos\grafo_mazatan_villapesqueira.bin"
 | `--no-save-cache` | Lee el caché pero no lo guarda. |
 | `--sin-cache` | No lee ni escribe ningún archivo de caché. |
 | `--serve` | Modo servidor: carga el grafo una vez y atiende peticiones `{"id", "puntos"}` por stdin; responde `{"id", "ok", "resultado"}` o `{"id", "ok": false, "error"}`. El caché se guarda al cerrarse stdin. |
+
+**Rutas de archivo**: se aceptan rutas con acentos y caracteres no ASCII en todas las opciones (por ejemplo `C:\Users\José Muñoz\...`). En Windows los argumentos se leen en Unicode (`GetCommandLineW`) y se manejan internamente en UTF-8.
+
+**Caché**: cada tramo guardado se valida contra el grafo cargado (nodos existentes y conectados, extremos correctos). Si el grafo se regeneró y un tramo ya no es válido, se descarta, se recalcula y se corrige en el archivo.
 
 **Códigos de salida**: `0` si la ruta se calculó; `1` ante entradas inválidas, grafo inexistente o un tramo sin ruta posible. El detalle del error se escribe en stderr con el prefijo `Error(py):`.

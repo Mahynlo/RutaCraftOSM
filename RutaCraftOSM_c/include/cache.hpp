@@ -1,5 +1,6 @@
 #pragma once
 #include "json.hpp"
+#include "archivos.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -19,6 +20,7 @@ public:
         return "(" + std::to_string(u_osm) + ", " + std::to_string(v_osm) + ")";
     }
 
+    // input: JSON con el caché o ruta (UTF-8) de un archivo de caché
     bool cargar(const std::string& input) {
         if (input.empty()) return false;
 
@@ -44,7 +46,7 @@ public:
         }
 
         // 2. Intentar leer desde archivo
-        std::ifstream file(input);
+        std::ifstream file(ruta_utf8(input));  // input es UTF-8
         if (file.is_open()) {
             try {
                 json data = json::parse(file);
@@ -69,7 +71,7 @@ public:
     }
 
     bool guardar(const std::string& path) const {
-        std::ofstream file(path);
+        std::ofstream file(ruta_utf8(path));   // path es UTF-8
         if (!file.is_open()) return false;
 
         json j = json::object();

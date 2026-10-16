@@ -16,7 +16,7 @@ sequenceDiagram
     participant Bin as grafo_zona.bin
 
     App->>TS: calcularRuta({ puntos: [...] })
-    TS->>Cpp: spawn("cli.exe", ["--stdout", "--array", ...])
+    TS->>Cpp: spawn("cli.exe", ["--stdout", "--puntos", "-"]) + puntos por stdin
     Cpp->>Bin: Carga del grafo (~35 ms)
     Cpp->>Cpp: KD-Tree + A* + Instrucciones
     Cpp-->>TS: Emite JSON en stdout (~50ms)
@@ -176,6 +176,8 @@ async function obtenerRutaLecturas() {
 
 > [!NOTE]
 > Las coordenadas se validan antes de llamar al motor (números finitos, latitud ±90, longitud ±180). Si algún tramo no tiene ruta posible, la promesa se rechaza en lugar de devolver una ruta incompleta.
+>
+> Los puntos se envían al motor por stdin, así que no hay límite práctico de paradas por ruta. El proceso se lanza con `windowsHide: true` (sin ventana de consola) y las rutas de `cachePath` o `grafo` pueden contener acentos.
 
 ### Paso 4 (recomendado en Electron): motor persistente
 En el proceso *main* de Electron, crea un único motor y reutilízalo en cada petición IPC. Guarda el caché en `userData`, que siempre tiene permisos de escritura (el directorio de trabajo de una app instalada puede no tenerlos):

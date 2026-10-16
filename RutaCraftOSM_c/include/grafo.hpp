@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include <filesystem>
 
 namespace rutacraft {
 
@@ -14,7 +15,7 @@ using json = nlohmann::json;
 class CargadorGrafo {
 public:
     // Carga binaria ultra rápida
-    static bool cargar_binario(const std::string& path, Grafo& grafo) {
+    static bool cargar_binario(const std::filesystem::path& path, Grafo& grafo) {
         std::ifstream file(path, std::ios::binary);
         if (!file.is_open()) return false;
 
@@ -72,7 +73,7 @@ public:
     }
 
     // Guarda binario para exportador
-    static bool guardar_binario(const std::string& path, const Grafo& grafo) {
+    static bool guardar_binario(const std::filesystem::path& path, const Grafo& grafo) {
         std::ofstream file(path, std::ios::binary);
         if (!file.is_open()) return false;
 
@@ -115,7 +116,7 @@ public:
     }
 
     // Carga desde JSON
-    static bool cargar_json(const std::string& path, Grafo& grafo) {
+    static bool cargar_json(const std::filesystem::path& path, Grafo& grafo) {
         std::ifstream file(path);
         if (!file.is_open()) return false;
 
@@ -181,15 +182,14 @@ public:
     }
 
     // Método universal de carga
-    static bool cargar(const std::string& path, Grafo& grafo) {
+    static bool cargar(const std::filesystem::path& path, Grafo& grafo) {
         if (cargar_binario(path, grafo)) return true;
         if (cargar_json(path, grafo)) return true;
 
         // Intentar cambiar extensión a .bin si se pasó .pkl o .graphml
-        std::string path_alt = path;
-        size_t dot_pos = path_alt.rfind('.');
-        if (dot_pos != std::string::npos) {
-            path_alt = path_alt.substr(0, dot_pos) + ".bin";
+        if (path.has_extension() && path.extension() != ".bin") {
+            std::filesystem::path path_alt = path;
+            path_alt.replace_extension(".bin");
             if (cargar_binario(path_alt, grafo)) return true;
         }
 

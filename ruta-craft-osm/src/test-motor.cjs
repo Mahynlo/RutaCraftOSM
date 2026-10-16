@@ -95,6 +95,55 @@ test("el motor guarda el caché al cerrar", async () => {
     }
 });
 
+function muchosPuntos(n) {
+    return Array.from({ length: n }, (_, i) => [29.06 + (i % 40) * 0.0003, -110.06 + Math.floor(i / 40) * 0.0003]);
+}
+
+test("calcularRuta acepta más puntos de los que caben en la línea de comandos", async () => {
+    // Antes fallaba con spawn ENAMETOOLONG a partir de ~1,300 puntos
+    const r = await calcularRuta({ puntos: muchosPuntos(2000) });
+    assert.equal(r.resultado.puntos_gps.length, 2000);
+});
+
+test("caché y grafo en carpetas con acentos (usuario 'José Muñoz')", async () => {
+    const dir = path.join(tmpDir(), "José Muñoz", "AppData");
+    fs.mkdirSync(dir, { recursive: true });
+    try {
+        const grafo = path.join(dir, "grafo_señal.bin");
+        fs.copyFileSync(path.join(__dirname, "..", "bin", "cli", "grafos", "grafo_mazatan_villapesqueira.bin"), grafo);
+        const cachePath = path.join(dir, "caché_rutas.json");
+
+        const r = await calcularRuta({ puntos: TRES_PUNTOS, grafo, cachePath });
+        assert.ok(r.resultado.distancia_total_m > 0);
+        assert.ok(fs.existsSync(cachePath));
+
+        const motor = crearMotorRutas({ grafo, cachePath });
+        try {
+            assert.deepEqual(await motor.calcular(TRES_PUNTOS), r.resultado);
+        } finally {
+            await motor.cerrar();
+        }
+    } finally {
+        fs.rmSync(path.dirname(path.dirname(dir)), { recursive: true, force: true });
+    }
+});
+
+test("los nombres de calle con acentos llegan íntegros", async () => {
+    const r = await calcularRuta({ puntos: muchosPuntos(300) });
+    for (const inst of r.resultado.instrucciones) {
+        assert.ok(!inst.calle.includes("�"), `nombre dañado: ${inst.calle}`);
+    }
+});
+
+test("si el motor no puede arrancar, las peticiones se rechazan sin tumbar el proceso", async () => {
+    // Grafo inexistente: el motor termina enseguida y escribir en su stdin daría EPIPE
+    const motor = crearMotorRutas({ grafo: path.join(tmpDir(), "no_existe.bin") });
+    await assert.rejects(motor.calcular(TRES_PUNTOS), /terminó/);
+    await assert.rejects(motor.calcular(TRES_PUNTOS), /terminó/);
+    await motor.cerrar();
+    await assert.rejects(calcularRuta({ puntos: TRES_PUNTOS, grafo: "no_existe.bin" }), /no existe/);
+});
+
 test("el timeout rechaza la petición", async () => {
     const motor = crearMotorRutas({ timeoutMs: 1 });
     try {
