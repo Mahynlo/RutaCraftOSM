@@ -1,18 +1,19 @@
 # ruta-craft-osm
 
-Genera rutas de múltiples puntos por calles reales, **sin conexión**, para Node.js y Electron, dentro de una zona específica y sin instalar un servidor de ruteo como OSRM. Lo hace un motor en C++ (A\*, KD-Tree) incluido en el paquete, sobre un grafo de OpenStreetMap de la zona que se elija. Trae como ejemplo el grafo de Mazatán y Villa Pesqueira (Sonora); AguaVP lo usa para sus rutas de lectura de medidores.
+Genera rutas de múltiples puntos por calles reales, **sin conexión**, para Node.js, Electron y el navegador, dentro de una zona específica y sin instalar un servidor de ruteo como OSRM. Lo hace un motor en C++ (A\*, KD-Tree) incluido en el paquete, nativo o compilado a WebAssembly, sobre un grafo de OpenStreetMap de la zona que se elija. Trae como ejemplo el grafo de Mazatán y Villa Pesqueira (Sonora); AguaVP lo usa para sus rutas de lectura de medidores.
 
 - Ruta por calles **más corta en distancia**, distancia total e instrucciones en español por calle (`"Gira a la derecha en Calle Morelos"`).
 - Optimización opcional del orden de las paradas.
 - Motor persistente para Electron: menos de 1 ms por ruta con el grafo ya cargado.
-- Windows x64, Linux x64 y macOS (Intel y Apple Silicon).
+- Windows x64, Linux x64 y macOS (Intel y Apple Silicon), y navegadores con WebAssembly.
+- Generador de grafos incluido: `npx ruta-craft-osm generar --geojson zona.geojson --salida grafo.bin`.
 
-**Alcance actual:** las rutas minimizan distancia. Todavía no estima tiempos (velocidades, tráfico) ni tiene restricciones de giro, y el grafo de ejemplo ignora los sentidos de las calles. No es navegación en tiempo real. Para otra zona se genera un grafo propio con el pipeline de Python del repositorio y se pasa en la opción `grafo`.
+**Alcance actual:** las rutas minimizan distancia. Todavía no estima tiempos (velocidades, tráfico) ni tiene restricciones de giro, y el grafo de ejemplo ignora los sentidos de las calles. No es navegación en tiempo real. Para otra zona se genera un grafo propio (ver [Generar el grafo de tu zona](#generar-el-grafo-de-tu-zona)) y se pasa en la opción `grafo`.
 
 ## Instalación
 
 ```powershell
-npm install ruta-craft-osm-0.1.0.tgz   # o "ruta-craft-osm": "file:ruta/al/paquete.tgz" en package.json
+npm install ruta-craft-osm-0.2.0.tgz   # o "ruta-craft-osm": "file:ruta/al/paquete.tgz" en package.json
 ```
 
 Requiere Node.js 18 o superior.
@@ -102,6 +103,29 @@ try {
 | `saveCache` | ✔ | ✔ | `false` para leer el caché sin guardarlo. |
 | `timeoutMs` | ✔ | ✔ | Tiempo máximo por cálculo (por defecto 30000). |
 | `optimizar`, `regresarAlInicio`, `fijarFinal` | ✔ | (en `calcular`) | Orden de las paradas. |
+
+## Generar el grafo de tu zona
+
+```powershell
+npx ruta-craft-osm generar --geojson zona.geojson --salida grafo.bin       # zona de un GeoJSON
+npx ruta-craft-osm generar --caja 28.97,-111.10,29.21,-110.86 --salida grafo.bin   # rectángulo sur,oeste,norte,este
+npx ruta-craft-osm generar --geojson zona.geojson --salida grafo.bin --respetar-sentido
+npx ruta-craft-osm info grafo.bin
+```
+
+Descarga las calles de OpenStreetMap (API Overpass, necesita internet solo en este paso) y escribe el grafo binario. Desde código: `const { bytes } = await generarGrafo({ zona: geojson })`, en Node o en el navegador. Los datos de OpenStreetMap están bajo la licencia ODbL: muestra la atribución «© colaboradores de OpenStreetMap».
+
+## Navegador (WebAssembly)
+
+```javascript
+import { crearMotorWeb } from 'ruta-craft-osm/web';
+
+const motor = await crearMotorWeb({ grafo: '/grafos/grafo.bin' });   // URL o Uint8Array
+const ruta = await motor.calcular(puntos, { optimizar: true });     // mismo resultado que el motor nativo
+await motor.cerrar();
+```
+
+El motor corre en un Web Worker (no congela la página). Vite, webpack 5 y esbuild encuentran solos el Worker y `motor.wasm`; si tu configuración los mueve, usa las opciones `wasmUrl` o `crearWorker`. El caché vive en memoria: `exportarCache()` / `importarCache()`. `cargarMotorWasm()` crea el motor en el hilo actual con llamadas síncronas (útil en un Worker propio o en Node).
 
 ## Empaquetado con Electron
 

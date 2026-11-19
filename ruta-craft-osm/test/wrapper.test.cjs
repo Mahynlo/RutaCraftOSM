@@ -1,4 +1,4 @@
-// Pruebas del wrapper: node --test src/test-motor.cjs (requiere npm run build)
+// Pruebas del wrapper de Node (motor nativo): node --test test/wrapper.test.cjs (requiere npm run build)
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");

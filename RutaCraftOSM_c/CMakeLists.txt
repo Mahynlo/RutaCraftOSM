@@ -17,6 +17,36 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# ---------------------------------------------------------------------------------------------
+# WebAssembly (emcmake cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build-wasm): genera el módulo para
+# el navegador directamente en el paquete npm, en ruta-craft-osm/wasm/motor.mjs + motor.wasm.
+# ---------------------------------------------------------------------------------------------
+if(EMSCRIPTEN)
+    set(RUTACRAFT_WASM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../ruta-craft-osm/wasm)
+    add_executable(motor src/wasm.cpp)
+    target_include_directories(motor PRIVATE include)
+    set_target_properties(motor PROPERTIES SUFFIX ".mjs" RUNTIME_OUTPUT_DIRECTORY ${RUTACRAFT_WASM_DIR})
+    # Excepciones nativas de WebAssembly (Chrome 95+, Firefox 100+, Safari 15.2+, Node 17+):
+    # el motor usa excepciones para los errores y así no cuestan nada cuando no se lanzan.
+    target_compile_options(motor PRIVATE -O3 -Wall -fwasm-exceptions)
+    target_link_options(motor PRIVATE
+        -O3
+        -fwasm-exceptions
+        --no-entry
+        -sMODULARIZE=1
+        -sEXPORT_ES6=1
+        -sEXPORT_NAME=crearModuloMotor
+        -sENVIRONMENT=web,worker,node
+        -sALLOW_MEMORY_GROWTH=1
+        -sSTACK_SIZE=1MB
+        -sEXPORTED_FUNCTIONS=_malloc,_free
+        -sEXPORTED_RUNTIME_METHODS=UTF8ToString,stringToNewUTF8,HEAPU8
+    )
+    return()
+endif()
+
+find_package(Threads REQUIRED)
+
 add_executable(cli src/main.cpp)
 target_include_directories(cli PRIVATE include)
 
@@ -36,6 +66,10 @@ if(WIN32)
     target_link_libraries(cli PRIVATE shell32)
     target_link_libraries(benchmark PRIVATE shell32 psapi)
 endif()
+
+# La matriz de distancias del optimizador reparte sus filas entre varios hilos
+target_link_libraries(cli PRIVATE Threads::Threads)
+target_link_libraries(benchmark PRIVATE Threads::Threads)
 
 foreach(target cli benchmark)
     if(MSVC)

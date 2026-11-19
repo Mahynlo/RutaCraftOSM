@@ -5,12 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-env:
-  PYTHONUTF8: "1"
-
 jobs:
   motor:
-    name: Motor y wrapper (${{ matrix.plataforma }})
+    name: Motor nativo y wrapper (${{ matrix.plataforma }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -23,10 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -34,16 +27,9 @@ jobs:
       - name: Compilar motor C++
         run: |
           cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build RutaCraftOSM_c/build --config Release
+          cmake --build RutaCraftOSM_c/build --config Release --target cli
 
-      - name: Pruebas del motor C++ (incluye paridad con Python, formatos y rutas Unicode)
-        run: python -m unittest RutaCraftOSM_c/tests/test_cpp_cli.py -v
-
-      - name: Pruebas del motor Python
-        working-directory: RutaCraftOSM
-        run: python -m unittest tests/test_cli.py tests/test_cli_errores.py -v
-
-      - name: Pruebas del wrapper con el binario recién compilado
+      - name: Pruebas (motor nativo, generador y wrapper con el binario recién compilado)
         shell: bash
         run: |
           mkdir -p ruta-craft-osm/bin/${{ matrix.plataforma }}
@@ -58,9 +44,45 @@ jobs:
           name: motor-${{ matrix.plataforma }}
           path: RutaCraftOSM_c/bin/${{ matrix.exe }}
 
+  wasm:
+    name: Motor WebAssembly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 7.0.0
+
+      - name: Compilar motor WebAssembly
+        run: |
+          emcmake cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build RutaCraftOSM_c/build-wasm
+
+      - name: Compilar motor nativo (referencia para la paridad)
+        run: |
+          cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build RutaCraftOSM_c/build --target cli
+
+      - name: Pruebas (incluye paridad byte a byte nativo / WebAssembly y el Worker)
+        working-directory: ruta-craft-osm
+        run: |
+          mkdir -p bin/linux-x64 && cp ../RutaCraftOSM_c/bin/cli bin/linux-x64/
+          npm install --no-fund --no-audit
+          npm test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: motor-wasm
+          path: ruta-craft-osm/wasm/
+
   paquete:
-    name: Paquete npm multiplataforma
-    needs: motor
+    name: Paquete npm
+    needs: [motor, wasm]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,16 +92,19 @@ jobs:
           pattern: motor-*
           path: binarios
 
-      - name: Reunir los binarios de todas las plataformas
+      - name: Reunir los binarios de todas las plataformas y el motor WebAssembly
         run: |
           for dir in binarios/motor-*; do
             plataforma="${dir#binarios/motor-}"
-            mkdir -p "ruta-craft-osm/bin/$plataforma"
-            cp "$dir"/* "ruta-craft-osm/bin/$plataforma/"
+            if [ "$plataforma" = "wasm" ]; then
+              mkdir -p ruta-craft-osm/wasm && cp "$dir"/* ruta-craft-osm/wasm/
+            else
+              mkdir -p "ruta-craft-osm/bin/$plataforma" && cp "$dir"/* "ruta-craft-osm/bin/$plataforma/"
+            fi
           done
           # Los artefactos de GitHub no conservan el permiso de ejecución
           chmod +x ruta-craft-osm/bin/linux-*/cli ruta-craft-osm/bin/darwin-*/cli
-          find ruta-craft-osm/bin -type f | sort
+          find ruta-craft-osm/bin ruta-craft-osm/wasm -type f | sort
 
       - uses: actions/setup-node@v4
         with:
@@ -91,7 +116,10 @@ jobs:
           npm install --no-fund --no-audit
           npm pack
           for f in package/bin/win32-x64/cli.exe package/bin/linux-x64/cli package/bin/darwin-x64/cli \
-                   package/bin/darwin-arm64/cli package/bin/grafos/grafo_mazatan_villapesqueira.bin package/dist/index.js; do
+                   package/bin/darwin-arm64/cli package/bin/grafos/grafo_mazatan_villapesqueira.bin \
+                   package/dist/index.js package/dist/cli.js package/dist/generador/index.js \
+                   package/dist/esm/web/index.js package/dist/esm/web/worker.js \
+                   package/dist/esm/wasm/motor.mjs package/dist/esm/wasm/motor.wasm; do
             tar tzf ruta-craft-osm-*.tgz | grep -qx "$f" || { echo "Falta $f en el paquete"; exit 1; }
           done
 

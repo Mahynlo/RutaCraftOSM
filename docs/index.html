@@ -28,10 +28,11 @@
         <div class="nav-right">
             <nav class="nav-links" id="nav-links">
                 <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="nav-link">Arquitectura</a>
-                <a href="doc.html?doc=2_IMPLEMENTACION_PYTHON_UV.md" class="nav-link">Python (uv)</a>
+                <a href="doc.html?doc=2_GENERADOR_DE_GRAFOS.md" class="nav-link">Generador</a>
                 <a href="doc.html?doc=3_MOTOR_CPP_RUTACRAFT.md" class="nav-link">Motor C++</a>
                 <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="nav-link">NPM / Electron</a>
                 <a href="doc.html?doc=5_RENDIMIENTO.md" class="nav-link">Rendimiento</a>
+                <a href="demo.html" class="nav-link">Demo web</a>
                 <a href="visualizacion_ruta.html" class="btn-cta">
                     <i class="fa-solid fa-map-location-dot"></i>
                     Visualizador Interactivo
@@ -63,9 +64,13 @@
                 Librería ligera para generar rutas por calles reales en una zona específica, sin conexión y sin instalar OSRM ni un motor de ruteo grande. Calcula la ruta más corta en distancia entre las paradas, con instrucciones en español y, si se pide, un mejor orden de visita.
             </p>
             <div class="hero-actions">
-                <a href="visualizacion_ruta.html" class="btn-cta btn-cta-lg">
+                <a href="demo.html" class="btn-cta btn-cta-lg">
                     <i class="fa-solid fa-play"></i>
-                    Probar Visualizador Web
+                    Probar en el navegador
+                </a>
+                <a href="visualizacion_ruta.html" class="btn-secondary">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    Visualizador del benchmark
                 </a>
                 <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="btn-secondary">
                     <i class="fa-solid fa-book-open"></i>
@@ -152,16 +157,16 @@
                 <div>
                     <div class="doc-icon icon-blue"><i class="fa-solid fa-sitemap"></i></div>
                     <div class="doc-title">1. Arquitectura y Migración</div>
-                    <div class="doc-desc">Propósito y alcance, arquitectura por capas y validación de que el motor C++ da la misma ruta que el de Python.</div>
+                    <div class="doc-desc">Propósito y alcance, arquitectura por capas y validación de la migración del motor a C++.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
 
-            <a href="doc.html?doc=2_IMPLEMENTACION_PYTHON_UV.md" class="doc-card">
+            <a href="doc.html?doc=2_GENERADOR_DE_GRAFOS.md" class="doc-card">
                 <div>
-                    <div class="doc-icon icon-yellow"><i class="fa-brands fa-python"></i></div>
-                    <div class="doc-title">2. Pipeline Python (uv)</div>
-                    <div class="doc-desc">Descarga de calles con OSMnx, exportación a .bin, .json y .pkl, y opción para respetar calles de un solo sentido.</div>
+                    <div class="doc-icon icon-yellow"><i class="fa-solid fa-map"></i></div>
+                    <div class="doc-title">2. Generador de Grafos</div>
+                    <div class="doc-desc">Descarga de calles de OpenStreetMap en TypeScript (Node o navegador), formato RCO2 y opción para respetar calles de un solo sentido.</div>
                 </div>
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>

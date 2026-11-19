@@ -7,6 +7,20 @@
 #include <numeric>
 #include <vector>
 
+// WebAssembly sin pthreads no puede crear hilos: ahí la matriz se calcula en un solo hilo
+#if !defined(RUTACRAFT_HILOS)
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+#define RUTACRAFT_HILOS 0
+#else
+#define RUTACRAFT_HILOS 1
+#endif
+#endif
+
+#if RUTACRAFT_HILOS
+#include <atomic>
+#include <thread>
+#endif
+
 namespace rutacraft {
 
 // Cómo se fija el recorrido al optimizar el orden. La primera parada siempre es el inicio.
@@ -28,16 +42,40 @@ public:
     // Hasta este número de paradas libres se prueban todas las permutaciones (8! = 40,320)
     static constexpr size_t MAX_EXACTO = 8;
 
-    // Matriz de distancias por la red entre los nodos (asimétrica si el grafo respeta sentidos)
-    static std::vector<std::vector<double>> matriz(const Grafo& grafo, const std::vector<int>& nodos) {
-        std::vector<std::vector<double>> d(nodos.size(), std::vector<double>(nodos.size(), 0.0));
-        for (size_t i = 0; i < nodos.size(); ++i) {
-            const std::vector<float> fila = Enrutador::distancias(grafo, nodos[i], nodos);
-            for (size_t j = 0; j < nodos.size(); ++j) {
+    // Matriz de distancias por la red entre los nodos (asimétrica si el grafo respeta sentidos).
+    // Si se pasa `caminos`, caminos[i][j] queda con el camino de nodos[i] a nodos[j] (vacío si no hay).
+    // Cada fila es un Dijkstra independiente; en compilación nativa se reparten entre varios hilos.
+    static std::vector<std::vector<double>> matriz(const Grafo& grafo, const std::vector<int>& nodos,
+                                                   std::vector<std::vector<std::vector<int>>>* caminos = nullptr) {
+        const size_t n = nodos.size();
+        std::vector<std::vector<double>> d(n, std::vector<double>(n, 0.0));
+        if (caminos) caminos->assign(n, {});
+
+        auto fila = [&](size_t i) {
+            const std::vector<float> dist = Enrutador::distancias(grafo, nodos[i], nodos, caminos ? &(*caminos)[i] : nullptr);
+            for (size_t j = 0; j < n; ++j) {
                 // Sin camino: costo muy alto pero finito, para que la suma de costos no dé NaN
-                d[i][j] = std::isinf(fila[j]) ? SIN_CAMINO : static_cast<double>(fila[j]);
+                d[i][j] = std::isinf(dist[j]) ? SIN_CAMINO : static_cast<double>(dist[j]);
             }
+        };
+
+        const size_t hilos = hilos_para(grafo, n);
+        if (hilos <= 1) {
+            for (size_t i = 0; i < n; ++i) fila(i);
+            return d;
         }
+#if RUTACRAFT_HILOS
+        // Cada hilo toma la siguiente fila libre; cada fila escribe solo su propia posición de d y caminos
+        std::atomic<size_t> siguiente{0};
+        std::vector<std::thread> trabajadores;
+        trabajadores.reserve(hilos);
+        for (size_t t = 0; t < hilos; ++t) {
+            trabajadores.emplace_back([&]() {
+                for (size_t i = siguiente++; i < n; i = siguiente++) fila(i);
+            });
+        }
+        for (auto& t : trabajadores) t.join();
+#endif
         return d;
     }
 
@@ -81,6 +119,20 @@ public:
 
 private:
     static constexpr double SIN_CAMINO = 1e12;
+
+    // Hilos para la matriz: solo vale la pena con varias filas y un grafo donde cada Dijkstra tarde
+    // más que crear un hilo (cada hilo reserva además su espacio de trabajo de tamaño N).
+    static size_t hilos_para(const Grafo& grafo, size_t filas) {
+#if RUTACRAFT_HILOS
+        if (filas < 4 || grafo.num_nodos() < 5000) return 1;
+        const size_t disponibles = std::max<size_t>(1, std::thread::hardware_concurrency());
+        return std::min({disponibles, filas, static_cast<size_t>(8)});
+#else
+        (void)grafo;
+        (void)filas;
+        return 1;
+#endif
+    }
 
     static double costo(const std::vector<std::vector<double>>& d, const std::vector<int>& s) {
         double total = 0;

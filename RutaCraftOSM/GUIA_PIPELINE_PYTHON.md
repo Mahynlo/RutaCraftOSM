@@ -1,5 +1,8 @@
 # 🐍 2. Pipeline de Datos en Python con `uv`
 
+> [!NOTE]
+> Guía histórica de la versión en Python (antes `docs/2_IMPLEMENTACION_PYTHON_UV.md`). El generador actual está en [2. Generador de grafos](../docs/2_GENERADOR_DE_GRAFOS.md).
+
 ## 1. Gestión del Entorno con `uv`
 
 Para la preparación de datos geográficos y las libretas de experimentación, se utiliza **`uv`**, el gestor de paquetes y entornos virtuales de Python de alta velocidad.
@@ -85,7 +88,7 @@ El motor C++ sigue aceptando `RCO1`, pero `RCO2` ocupa un tercio del espacio y c
 | `False` (por defecto) | Cada arista se agrega también en sentido contrario: el motor **ignora** las calles de un solo sentido. | Grafo de producción actual (`grafo_mazatan_villapesqueira.bin`). |
 | `True` | Solo las aristas que trae OSMnx, que ya incluye ambos sentidos en las calles de doble sentido. | Rutas que respetan los sentidos; archivo ~40% más chico y carga más rápida. |
 
-En Hermosillo, el 17.7% de las aristas son de un solo sentido y respetarlas alarga las rutas entre 1% y 12%. Ver la comparación completa en [5. Rendimiento](./5_RENDIMIENTO.md#5-calles-de-un-solo-sentido).
+En Hermosillo, el 17.7% de las aristas son de un solo sentido y respetarlas alarga las rutas entre 1% y 12%. Ver la comparación completa en [5. Rendimiento](../docs/5_RENDIMIENTO.md#5-calles-de-un-solo-sentido).
 
 ---
 

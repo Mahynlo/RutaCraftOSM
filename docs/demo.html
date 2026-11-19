@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo en el navegador - RutaCraftOSM</title>
+    <meta name="description" content="El motor de rutas de RutaCraftOSM corriendo en el navegador con WebAssembly, sin servidor.">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="js/theme.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; height: 100%; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-body);
+            display: flex;
+            overflow: hidden;
+        }
+        #panel {
+            width: 380px;
+            flex-shrink: 0;
+            height: 100%;
+            overflow-y: auto;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 18px 18px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        #mapa { flex: 1; height: 100%; }
+        .fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .marca { font-weight: 700; font-size: 1.05rem; color: var(--text-main); display: flex; gap: 8px; align-items: center; }
+        .insignia {
+            font-size: 0.65rem; font-weight: 600; padding: 2px 7px; border-radius: 999px;
+            background: var(--primary-soft); color: var(--primary-light); letter-spacing: 0.02em;
+        }
+        .acciones-cabecera { display: flex; gap: 6px; align-items: center; }
+        .acciones-cabecera a, .btn-theme-toggle {
+            color: var(--text-muted); text-decoration: none; font-size: 0.8rem; padding: 4px 8px;
+            border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer;
+        }
+        .tarjeta {
+            background: var(--surface-card);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+        .tarjeta h2 {
+            margin: 0 0 8px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+            color: var(--text-muted); font-weight: 600;
+        }
+        .texto { font-size: 0.82rem; line-height: 1.5; margin: 0; }
+        .estado { font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 8px; align-items: flex-start; }
+        .estado.ok i { color: var(--success); }
+        .estado.error { color: var(--danger); }
+        .metricas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .metrica .valor { font-size: 1.25rem; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .metrica .etiqueta { font-size: 0.7rem; color: var(--text-muted); }
+        button.primario, button.secundario {
+            font: inherit; font-size: 0.85rem; font-weight: 600; border-radius: 8px; padding: 9px 12px;
+            cursor: pointer; border: 1px solid transparent; display: inline-flex; gap: 8px; align-items: center;
+            justify-content: center;
+        }
+        button.primario { background: var(--primary); color: #fff; }
+        button.primario:hover:not(:disabled) { background: var(--primary-dark); }
+        button.secundario { background: transparent; color: var(--text-body); border-color: var(--border); }
+        button.secundario:hover:not(:disabled) { background: var(--surface-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .botones { display: flex; gap: 8px; flex-wrap: wrap; }
+        .botones > button { flex: 1; }
+        label.opcion { font-size: 0.82rem; display: flex; gap: 8px; align-items: center; cursor: pointer; }
+        ol#paradas { margin: 0; padding-left: 22px; font-size: 0.8rem; max-height: 150px; overflow-y: auto; }
+        ol#paradas li { padding: 2px 0; font-variant-numeric: tabular-nums; }
+        ol#paradas button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0 4px; }
+        ol#instrucciones { margin: 0; padding-left: 22px; font-size: 0.8rem; max-height: 240px; overflow-y: auto; }
+        ol#instrucciones li { padding: 3px 0; }
+        ol#instrucciones .dist { color: var(--text-muted); }
+        .vacio { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
+        .numero-parada {
+            background: var(--primary); color: #fff; border: 2px solid #fff; border-radius: 50%;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            font: 700 11px 'Inter', sans-serif; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        }
+        .numero-parada.inicio { background: var(--success); }
+        @media (max-width: 760px) {
+            body { flex-direction: column; overflow: auto; }
+            #panel { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px; }
+            #mapa { min-height: 70vh; flex: none; }
+        }
+    </style>
+</head>
+<body>
+    <aside id="panel">
+        <div class="fila">
+            <div class="marca"><i class="fa-solid fa-route" style="color: var(--cpp);"></i> RutaCraftOSM <span class="insignia">WebAssembly</span></div>
+            <div class="acciones-cabecera">
+                <button class="btn-theme-toggle" aria-label="Cambiar tema"></button>
+                <a href="index.html" title="Documentación"><i class="fa-solid fa-house"></i></a>
+            </div>
+        </div>
+
+        <p class="texto">
+            El motor de rutas en C++ compilado a WebAssembly corre aquí, dentro de tu navegador, en un Web Worker.
+            No hay servidor de ruteo: el grafo vial se descarga una vez y todo se calcula localmente.
+        </p>
+
+        <div id="estado" class="estado"><i class="fa-solid fa-spinner fa-spin"></i><span>Cargando el motor WebAssembly…</span></div>
+
+        <section class="tarjeta">
+            <h2>Paradas</h2>
+            <p class="texto" style="margin-bottom: 8px;">Haz clic en el mapa para agregar paradas. La primera es el inicio.</p>
+            <ol id="paradas"></ol>
+            <p id="sin-paradas" class="vacio">Sin paradas todavía.</p>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin: 10px 0;">
+                <label class="opcion"><input type="checkbox" id="optimizar"> Optimizar el orden de visita</label>
+                <label class="opcion"><input type="checkbox" id="regresar"> Regresar al inicio</label>
+            </div>
+            <div class="botones">
+                <button class="primario" id="calcular" disabled><i class="fa-solid fa-play"></i> Calcular ruta</button>
+                <button class="secundario" id="ejemplo" disabled title="Ruta de lectura de ejemplo en Mazatán">Ejemplo</button>
+                <button class="secundario" id="limpiar" title="Quitar todas las paradas"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </section>
+
+        <section class="tarjeta">
+            <h2>Resultado</h2>
+            <div class="metricas">
+                <div class="metrica"><div class="valor" id="m-distancia">–</div><div class="etiqueta">Distancia</div></div>
+                <div class="metrica"><div class="valor" id="m-tiempo">–</div><div class="etiqueta">Tiempo de cálculo</div></div>
+                <div class="metrica"><div class="valor" id="m-puntos">–</div><div class="etiqueta">Puntos de la polilínea</div></div>
+                <div class="metrica"><div class="valor" id="m-ahorro">–</div><div class="etiqueta">Ahorro al optimizar</div></div>
+            </div>
+        </section>
+
+        <section class="tarjeta">
+            <h2>Instrucciones</h2>
+            <ol id="instrucciones"></ol>
+            <p id="sin-instrucciones" class="vacio">Calcula una ruta para ver las instrucciones.</p>
+        </section>
+
+        <section class="tarjeta">
+            <h2>Grafo</h2>
+            <p class="texto" id="info-grafo">–</p>
+            <p class="texto" style="margin: 8px 0;">
+                También puedes generar el grafo de la zona visible en el mapa: se descarga de OpenStreetMap
+                (API Overpass) y se arma aquí mismo, sin Python ni servidor propio.
+            </p>
+            <div class="botones">
+                <button class="secundario" id="generar" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Generar grafo de esta vista</button>
+                <button class="secundario" id="descargar" disabled title="Descargar el grafo actual (.bin)"><i class="fa-solid fa-download"></i></button>
+            </div>
+            <label class="opcion" style="margin-top: 8px;"><input type="checkbox" id="sentidos"> Respetar calles de un solo sentido</label>
+        </section>
+    </aside>
+    <div id="mapa"></div>
+
+    <script type="module" src="js/demo.js"></script>
+</body>
+</html>

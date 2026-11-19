@@ -1,5 +1,21 @@
 # Cambios de ruta-craft-osm
 
+## 0.2.0
+
+### Nuevo
+- **Navegador (WebAssembly)**: `ruta-craft-osm/web` con `crearMotorWeb()` (motor en un Web Worker) y `cargarMotorWasm()` (síncrono). Es el mismo motor C++ compilado con Emscripten y da exactamente las mismas respuestas que el nativo.
+- **Generador de grafos en TypeScript** (reemplaza a los scripts de Python con OSMnx): `generarGrafo()` en Node y en el navegador, y la CLI `npx ruta-craft-osm generar | info | reordenar`. Produce el mismo grafo que OSMnx (mismos nodos, aristas y distancias). Las calles sin nombre usan su referencia (p. ej. `MEX 15`).
+- `ruta-craft-osm/generador` y los tipos compartidos se exportan también como módulos ES.
+
+### Rendimiento
+- Optimizar el orden de muchas paradas es mucho más rápido: la matriz de distancias se calcula en varios hilos y sus caminos se reutilizan como tramos de la ruta (50 paradas en Hermosillo: ~1.3 s → ~0.12 s).
+- A\* usa una proyección plana precalculada para la heurística (sin trigonometría por nodo): 20–30% más rápido.
+- El grafo incluido tiene los nodos ordenados por la curva de Hilbert (mejor uso de la caché del procesador): otro 15–30% en A\*. Las distancias no cambian. Los grafos existentes se pueden reordenar con `ruta-craft-osm reordenar`.
+
+### Cambios
+- En el modo servidor, un campo booleano con otro tipo (p. ej. `"optimizar": "si"`) se rechaza como `ENTRADA_INVALIDA` (antes `INTERNO`).
+- El grafo incluido se regeneró con el nuevo generador: mismos nodos, aristas y distancias; cambian el orden interno de los nodos y dos nombres de vía tomados de su referencia. Los cachés de tramos existentes siguen siendo válidos (usan OSM IDs).
+
 ## 0.1.0
 
 ### Nuevo
@@ -29,4 +45,4 @@
 
 ## 0.0.7
 
-Versión inicial del wrapper sobre el motor Python empaquetado con Nuitka.
+Versión inicial del wrapper sobre el motor anterior (Python empaquetado con Nuitka).

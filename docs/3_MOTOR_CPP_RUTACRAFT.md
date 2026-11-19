@@ -8,6 +8,7 @@ El motor es un ejecutable de C++20 sin dependencias externas: carga el grafo, aj
 
 ```text
 RutaCraftOSM_c/src/main.cpp     # CLI: parseo de opciones, modo clásico y modo servidor (--serve)
+RutaCraftOSM_c/src/wasm.cpp     # Interfaz WebAssembly (funciones C con JSON, ver sección 6)
 RutaCraftOSM_c/bench/           # Benchmark por fases (ver 5. Rendimiento)
 RutaCraftOSM_c/include/
 ├── types.hpp           # Coordenada, Grafo (formato CSR) e Instruccion
@@ -20,7 +21,8 @@ RutaCraftOSM_c/include/
 ├── grafo.hpp           # Cargador de grafos RCO2, RCO1 (compatibilidad) y JSON
 ├── archivos.hpp        # Rutas UTF-8, argumentos Unicode y ubicación del ejecutable por sistema operativo
 ├── cache.hpp           # Gestor de caché de rutas con persistencia JSON
-├── ruta.hpp            # calcular_ruta(): snapping + orden + A* por tramo + instrucciones (CLI y benchmark)
+├── ruta.hpp            # calcular_ruta(): snapping + orden + A* por tramo + instrucciones
+├── motor.hpp           # Motor: grafo + KD-Tree + caché y el protocolo JSON (CLI, --serve y WebAssembly)
 └── json.hpp            # Parser y serializador JSON (nlohmann/json)
 ```
 
@@ -51,7 +53,7 @@ uint8    nombres[B]           UTF-8 concatenado
 ```
 
 * **Validación**: el tamaño esperado se calcula con el encabezado, así que un archivo truncado o con datos de más se rechaza. También se verifica que todos los índices estén en rango, para que un archivo corrupto no provoque accesos fuera de memoria.
-* **Compatibilidad**: el motor sigue cargando el formato histórico `RCO1` (y JSON) y lo convierte a la misma estructura en memoria. [`formato_rco.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/formato_rco.py) convierte archivos `RCO1` a `RCO2`.
+* **Compatibilidad**: el motor sigue cargando el formato histórico `RCO1` (y JSON) y lo convierte a la misma estructura en memoria. Los grafos se generan con [`ruta-craft-osm generar`](./2_GENERADOR_DE_GRAFOS.md), que escribe `RCO2`.
 
 | Grafo | RCO1 | RCO2 |
 | :--- | ---: | ---: |
@@ -70,19 +72,19 @@ En lugar de calcular distancias contra todos los nodos del mapa (escaneo $O(N)$)
 
 ---
 
-## 4. Algoritmo A\* con Heurística Euclidiana Rápida
+## 4. Algoritmo A\* con Heurística Plana Precalculada
 
 La clase `Enrutador` en [`astar.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/astar.hpp) implementa el algoritmo A\* optimizado para hardware moderno:
 
 1. **Memoria reutilizada**: `g`, `padre`, `cerrado` y el montículo se reservan una sola vez (por hilo) y se reutilizan en cada búsqueda. Una marca de "generación" indica qué valores pertenecen a la búsqueda actual, así que no hay que reiniciar arreglos de tamaño $N$ por cada tramo de la ruta.
-2. **Cola de prioridad (min-heap)**: `std::priority_queue` sobre `std::pair<float, int>`.
-3. **Aproximación Euclidiana Equirrectangular**:
+2. **Cola de prioridad (min-heap)**: `std::push_heap`/`std::pop_heap` sobre un vector de `std::pair<float, int>` reutilizado.
+3. **Proyección plana precalculada**: al cargar el grafo, cada nodo se proyecta a metros (`float x, y`, relativos al centro del grafo) con una escala fija; la heurística por nodo es solo una raíz cuadrada, sin trigonometría. Es la fórmula equirrectangular, pero con la latitud del grafo más alejada del ecuador en lugar de la latitud media: su coseno es el menor, así que la escala del eje $x$ nunca supera a la de la fórmula original:
    Para la heurística de distancia estimada al destino:
-   $$\Delta x = (\text{lon}_2 - \text{lon}_1) \cdot \cos(\text{lat}_{\text{media}}) \cdot \frac{\pi R}{180}$$
+   $$\Delta x = (\text{lon}_2 - \text{lon}_1) \cdot \cos(\text{lat}_{\text{extrema}}) \cdot \frac{\pi R}{180}$$
    $$\Delta y = (\text{lat}_2 - \text{lat}_1) \cdot \frac{\pi R}{180}$$
    $$h = 0.999 \cdot \sqrt{\Delta x^2 + \Delta y^2}, \quad R = 6{,}371{,}000\text{ m}$$
-   *Es **5x a 8x más rápida** que Haversine completo.*
-4. **Heurística admisible**: para que A\* garantice la ruta más corta, $h$ nunca debe superar la distancia real. Se usa el radio medio de la Tierra (menor que los 6,371,009 m con los que OSMnx mide las aristas) y un margen de 0.1%, mayor que el error máximo de la aproximación plana (~0.0125% a 400 km). Una prueba compara la distancia del motor con Dijkstra exacto en pares de nodos al azar.
+4. **Heurística admisible**: para que A\* garantice la ruta más corta, $h$ nunca debe superar la distancia real. Se usa el radio medio de la Tierra (menor que los 6,371,009 m con los que se miden las aristas), la escala $x$ mínima y un margen de 0.1%, mayor que el error máximo de la aproximación plana (~0.0125% a 400 km). Una prueba compara la distancia del motor con Dijkstra exacto en pares de nodos al azar.
+5. **Orden de los nodos**: los grafos generados numeran los nodos por la curva de Hilbert, así que los vecinos en el mapa están cerca en memoria ([2. Generador](./2_GENERADOR_DE_GRAFOS.md#4-orden-de-los-nodos-curva-de-hilbert)).
 
 ---
 
@@ -122,15 +124,29 @@ cmake --build build --config Release
 
 Atajo en Windows con MinGW (`build.bat`), equivalente a:
 ```powershell
-g++ -O3 -std=c++20 -static -Iinclude src/main.cpp -o bin/cli.exe
+g++ -O3 -std=c++20 -static -pthread -Iinclude src/main.cpp -o bin/cli.exe -lshell32
 ```
 * **Tamaño final**: ~3.5 MB
 * **Dependencias**: Cero DLLs externas.
 
+### WebAssembly
+
+Con [Emscripten](https://emscripten.org) el mismo código se compila a WebAssembly. El módulo (`motor.mjs` + `motor.wasm`, ~375 KB en total) queda directamente en `ruta-craft-osm/wasm/`:
+
+```powershell
+emcmake cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build-wasm -DCMAKE_BUILD_TYPE=Release
+cmake --build RutaCraftOSM_c/build-wasm
+# o, desde ruta-craft-osm/:  npm run build:wasm
+```
+
+[`wasm.cpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/src/wasm.cpp) expone funciones C (`rc_cargar_grafo`, `rc_calcular`, `rc_exportar_cache`, ...) que reciben y devuelven JSON con el mismo protocolo que `--serve`; las dos versiones usan la clase `Motor` de `motor.hpp`. Se compila con excepciones nativas de WebAssembly (`-fwasm-exceptions`: Chrome 95+, Firefox 100+, Safari 15.2+, Node 17+). Sin hilos, la matriz de distancias del optimizador se calcula en uno solo.
+
+### Benchmark
+
 El benchmark se compila aparte (no se distribuye) y se ejecuta con:
 ```powershell
 cmake --build build --config Release --target benchmark
-python bench/correr_benchmark.py   # regenera docs/5_RENDIMIENTO.md, docs/benchmark.json y las rutas del visualizador
+node bench/correr_benchmark.mjs   # regenera docs/5_RENDIMIENTO.md, docs/benchmark.json y las rutas del visualizador
 ```
 
 ---
@@ -201,7 +217,7 @@ Un error en una petición no detiene el servidor; las demás se siguen atendiend
 
 Con `--optimizar` el motor elige en qué orden visitar las paradas para recorrer la menor distancia. En [`optimizar.hpp`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM_c/include/optimizar.hpp):
 
-1. **Matriz de distancias por la red**: un Dijkstra desde cada parada que se detiene al alcanzar todas las demás. Son distancias reales por calle (no en línea recta) y, en un grafo que respeta sentidos, pueden ser asimétricas (A→B ≠ B→A).
+1. **Matriz de distancias por la red**: un Dijkstra desde cada parada que se detiene al alcanzar todas las demás. Son distancias reales por calle (no en línea recta) y, en un grafo que respeta sentidos, pueden ser asimétricas (A→B ≠ B→A). En el motor nativo las filas se reparten entre varios hilos (hasta 8), y con hasta 200 paradas los caminos encontrados se reutilizan como tramos de la ruta final, así que no se repite A\*. Optimizar 50 paradas en Hermosillo bajó de ~1.3 s a ~0.12 s por llamada.
 2. **Búsqueda del orden**, con la primera parada fija como inicio:
    * Hasta **8 paradas libres**: se prueban todas las permutaciones (8! = 40,320) y el resultado es el **óptimo exacto**.
    * Más paradas: **vecino más cercano** como solución inicial y mejoras locales **2-opt** (invertir un tramo) y **Or-opt** (mover una parada), con el cambio de costo calculado en O(1) mediante sumas acumuladas en ambos sentidos. La mejora se aplica también al orden recibido y se elige el mejor resultado, así que nunca empeora una ruta que ya venía bien ordenada.
