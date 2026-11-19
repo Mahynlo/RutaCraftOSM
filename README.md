@@ -158,6 +158,13 @@ Una sola suite (`node --test`) cubre el motor nativo (CLI, modo servidor, caché
 
 GitHub Actions ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) compila el motor en Windows, Linux y macOS y el módulo WebAssembly, corre la suite en cada push a `main` y en cada pull request y arma el paquete npm multiplataforma.
 
+### Publicar una versión
+
+1. Actualiza la versión en `ruta-craft-osm/package.json` y en `project(... VERSION ...)` de `RutaCraftOSM_c/CMakeLists.txt`, y agrega su sección `## X.Y.Z` en `ruta-craft-osm/CHANGELOG.md`.
+2. Sube una etiqueta: `git tag v0.2.0 && git push origin v0.2.0` (con sufijo, como `v0.3.0-rc.1`, se publica como pre-release).
+
+El workflow [`release.yml`](./.github/workflows/release.yml) verifica que la etiqueta coincida con esas versiones, corre el CI completo y publica en [GitHub Releases](https://github.com/Mahynlo/RutaCraftOSM/releases) el CLI de cada plataforma (con el grafo de ejemplo), el paquete npm (`.tgz`), el módulo WebAssembly y sus sumas SHA-256. Si el repositorio tiene el secreto `NPM_TOKEN`, también publica el paquete en npm.
+
 ### Benchmark
 
 ```powershell

@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.16)
 # macOS: macOS 11 o superior (std::filesystem requiere 10.15). Debe definirse antes de project().
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Versión mínima de macOS")
 
-project(RutaCraftOSM LANGUAGES CXX)
+# La versión debe coincidir con ruta-craft-osm/package.json (lo verifican las pruebas y el release)
+project(RutaCraftOSM VERSION 0.2.0 LANGUAGES CXX)
 
 # Binario estático en Windows (MinGW) y Linux: el ejecutable no depende de las DLL de MinGW ni de
 # la versión de glibc de la máquina donde se instala la app. macOS no admite binarios estáticos.
@@ -49,6 +50,7 @@ find_package(Threads REQUIRED)
 
 add_executable(cli src/main.cpp)
 target_include_directories(cli PRIVATE include)
+target_compile_definitions(cli PRIVATE RUTACRAFT_VERSION="${PROJECT_VERSION}")
 
 # El binario queda en bin/ (igual que build.bat), también con generadores multi-config (Visual Studio)
 set_target_properties(cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)

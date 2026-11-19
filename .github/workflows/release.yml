@@ -1,0 +1,144 @@
+name: Release
+
+# Publica un release al subir una etiqueta de versión:
+#
+#   git tag v0.2.0 && git push origin v0.2.0         -> release
+#   git tag v0.3.0-rc.1 && git push origin v0.3.0-rc.1 -> pre-release
+#
+# La etiqueta debe coincidir con la versión de ruta-craft-osm/package.json (y la parte sin sufijo con
+# RutaCraftOSM_c/CMakeLists.txt y una sección "## X.Y.Z" del CHANGELOG). Corre el CI completo y publica
+# exactamente lo que se probó: el CLI por plataforma, el paquete npm y el módulo WebAssembly.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Verificar versión
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      base: ${{ steps.v.outputs.base }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: v
+        name: La etiqueta coincide con package.json, CMakeLists.txt y CHANGELOG
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          base="${version%%-*}"
+          paquete=$(node -p "require('./ruta-craft-osm/package.json').version")
+          cmake=$(sed -nE 's/^project\(RutaCraftOSM VERSION ([0-9.]+).*/\1/p' RutaCraftOSM_c/CMakeLists.txt)
+          [ "$paquete" = "$version" ] || { echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con package.json ($paquete)"; exit 1; }
+          [ "$cmake" = "$base" ] || { echo "::error::CMakeLists.txt tiene la versión $cmake, se esperaba $base"; exit 1; }
+          grep -q "^## $base\$" ruta-craft-osm/CHANGELOG.md || { echo "::error::Falta la sección '## $base' en ruta-craft-osm/CHANGELOG.md"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$([ "$version" != "$base" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    needs: version
+    uses: ./.github/workflows/ci.yml
+
+  publicar:
+    name: Publicar en GitHub Releases
+    needs: [version, ci]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefactos
+
+      - name: Armar los archivos del release
+        run: |
+          mkdir -p publicar
+          for dir in artefactos/motor-*; do
+            plataforma="${dir#artefactos/motor-}"
+            [ "$plataforma" = "wasm" ] && continue
+            nombre="ruta-craft-osm-cli-$VERSION-$plataforma"
+            mkdir -p "armado/$nombre/grafos"
+            cp "$dir"/* "armado/$nombre/"
+            cp ruta-craft-osm/bin/grafos/grafo_mazatan_villapesqueira.bin "armado/$nombre/grafos/"
+            cp RutaCraftOSM_c/LEEME_CLI.md "armado/$nombre/LEEME.md"
+            if [ "$plataforma" = "win32-x64" ]; then
+              (cd armado && zip -qr "../publicar/$nombre.zip" "$nombre")
+            else
+              chmod +x "armado/$nombre/cli"   # los artefactos de GitHub no conservan el permiso de ejecución
+              tar -czf "publicar/$nombre.tar.gz" -C armado "$nombre"
+            fi
+          done
+          (cd artefactos/motor-wasm && zip -q "../../publicar/ruta-craft-osm-wasm-$VERSION.zip" motor.mjs motor.wasm)
+          cp artefactos/ruta-craft-osm-multiplataforma/ruta-craft-osm-*.tgz publicar/
+          (cd publicar && sha256sum * > SHA256SUMS.txt)
+          ls -la publicar
+
+      - name: Notas del release (sección del CHANGELOG)
+        env:
+          BASE: ${{ needs.version.outputs.base }}
+        run: |
+          awk -v v="## $BASE" '$0 == v {f = 1; next} /^## / && f {exit} f' ruta-craft-osm/CHANGELOG.md > notas.md
+          cat >> notas.md <<EOF
+
+          ## Descargas
+
+          | Archivo | Para qué |
+          | :--- | :--- |
+          | \`ruta-craft-osm-$VERSION.tgz\` | Paquete npm (Node, Electron y navegador) con los motores de las 4 plataformas y WebAssembly: \`npm install ./ruta-craft-osm-$VERSION.tgz\` |
+          | \`ruta-craft-osm-cli-$VERSION-<plataforma>\` | Motor de rutas de línea de comandos con el grafo de ejemplo (win32-x64, linux-x64, darwin-x64, darwin-arm64) |
+          | \`ruta-craft-osm-wasm-$VERSION.zip\` | Módulo WebAssembly suelto (\`motor.mjs\` + \`motor.wasm\`) |
+          | \`SHA256SUMS.txt\` | Sumas SHA-256 para verificar las descargas |
+
+          Los grafos usan datos de OpenStreetMap (© colaboradores de OpenStreetMap, licencia ODbL).
+          EOF
+          cat notas.md
+
+      - name: Crear el release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" publicar/* \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notas.md \
+            --verify-tag \
+            $([ "$PRERELEASE" = "true" ] && echo --prerelease)
+
+  npm:
+    name: Publicar en npm (opcional)
+    needs: [version, publicar]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ruta-craft-osm-multiplataforma
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Solo si el repositorio tiene el secreto NPM_TOKEN (Settings > Secrets and variables > Actions).
+      # Sin él, el paquete queda publicado únicamente en GitHub Releases.
+      - name: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::notice::Sin secreto NPM_TOKEN: no se publica en npm (el paquete está en GitHub Releases)"
+            exit 0
+          fi
+          npm publish ./ruta-craft-osm-*.tgz --access public $([ "$PRERELEASE" = "true" ] && echo "--tag next")

@@ -1,9 +1,27 @@
 name: CI
 
+# Compila y prueba en cada push a main y en cada PR. El release (release.yml) lo reutiliza con
+# workflow_call para publicar exactamente lo que se probó.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "RutaCraftOSM/**"   # versión histórica en Python, no forma parte del build
+      - "Libretas/**"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "RutaCraftOSM/**"
+      - "Libretas/**"
+  workflow_call:
+
+# Un push nuevo a la misma rama o PR cancela la ejecución anterior, que ya no sirve
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   motor:
