@@ -6,6 +6,7 @@
 - **Navegador (WebAssembly)**: `ruta-craft-osm/web` con `crearMotorWeb()` (motor en un Web Worker) y `cargarMotorWasm()` (síncrono). Es el mismo motor C++ compilado con Emscripten y da exactamente las mismas respuestas que el nativo.
 - **Generador de grafos en TypeScript** (reemplaza a los scripts de Python con OSMnx): `generarGrafo()` en Node y en el navegador, y la CLI `npx ruta-craft-osm generar | info | reordenar`. Produce el mismo grafo que OSMnx (mismos nodos, aristas y distancias). Las calles sin nombre usan su referencia (p. ej. `MEX 15`).
 - `ruta-craft-osm/generador` y los tipos compartidos se exportan también como módulos ES.
+- **Releases en GitHub**: cada versión publica el CLI para Windows, Linux y macOS (con el grafo de ejemplo), el paquete npm multiplataforma y el módulo WebAssembly, con sumas SHA-256. `cli --version` muestra la versión del motor.
 
 ### Rendimiento
 - Optimizar el orden de muchas paradas es mucho más rápido: la matriz de distancias se calcula en varios hilos y sus caminos se reutilizan como tramos de la ruta (50 paradas en Hermosillo: ~1.3 s → ~0.12 s).

@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import {
-    aleatorio, calcularCli, CLI, correr, dijkstra, DOS_PUNTOS, escribirRCO1, GRAFO, haversine, largoPolilinea,
+    aleatorio, calcularCli, CLI, correr, dijkstra, DOS_PUNTOS, escribirRCO1, GRAFO, haversine, largoPolilinea, PAQUETE,
     RUTA_MUNICIPAL, servir, SIN_CLI, tmpDir, TRES_PUNTOS,
 } from "./ayudantes.mjs";
 
@@ -88,6 +88,16 @@ describe("CLI clásica", { skip: SIN_CLI }, () => {
             assert.equal(r.codigo, 2, args.join(" "));
             assert.match(r.stderr.toLowerCase(), new RegExp(mensaje));
         }
+    });
+
+    test("--version coincide con package.json y CMakeLists.txt", () => {
+        // En un pre-release (p. ej. 0.3.0-rc.1) CMake solo lleva la parte numérica
+        const version = JSON.parse(fs.readFileSync(path.join(PAQUETE, "package.json"), "utf8")).version.split("-")[0];
+        const cmake = fs.readFileSync(path.join(PAQUETE, "..", "RutaCraftOSM_c", "CMakeLists.txt"), "utf8");
+        assert.equal(cmake.match(/project\(RutaCraftOSM VERSION ([\d.]+)/)[1], version);
+        const r = correr(["--version"]);
+        assert.equal(r.codigo, 0);
+        assert.equal(r.stdout.trim(), `ruta-craft-osm ${version}`);
     });
 
     test("grafo inexistente", () => {

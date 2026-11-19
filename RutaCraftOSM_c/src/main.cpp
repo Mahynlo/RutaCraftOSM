@@ -12,6 +12,11 @@
 #include <iomanip>
 #include <stdexcept>
 
+// Versión del motor (la define CMake a partir de project(VERSION); build.bat no la conoce)
+#ifndef RUTACRAFT_VERSION
+#define RUTACRAFT_VERSION "desarrollo"
+#endif
+
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 using namespace rutacraft;
@@ -101,6 +106,13 @@ int ejecutar(const std::vector<std::string>& argv) {
     };
 
     // Parseo de argumentos CLI
+    for (const std::string& arg : argv) {
+        if (arg == "--version") {
+            std::cout << "ruta-craft-osm " << RUTACRAFT_VERSION << "\n";
+            return 0;
+        }
+    }
+
     for (int i = 0; i < argc; ++i) {
         const std::string& arg = argv[i];
         if (arg == "--grafo") {

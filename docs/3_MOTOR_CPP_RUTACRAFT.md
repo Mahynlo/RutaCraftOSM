@@ -155,6 +155,8 @@ node bench/correr_benchmark.mjs   # regenera docs/5_RENDIMIENTO.md, docs/benchma
 
 ```powershell
 # Desde RutaCraftOSM_c/
+./bin/cli --version   # p. ej. "ruta-craft-osm 0.2.0"
+
 $grafo = "..\RutaCraftOSM\grafos\grafo_mazatan_villapesqueira.bin"
 
 # Ruta con coordenadas en la línea de comandos (lat lon lat lon ...)
