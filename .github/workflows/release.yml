@@ -73,6 +73,7 @@ jobs:
             cp "$dir"/* "armado/$nombre/"
             cp ruta-craft-osm/bin/grafos/grafo_mazatan_villapesqueira.bin "armado/$nombre/grafos/"
             cp RutaCraftOSM_c/LEEME_CLI.md "armado/$nombre/LEEME.md"
+            cp LICENSE "armado/$nombre/LICENSE"
             if [ "$plataforma" = "win32-x64" ]; then
               (cd armado && zip -qr "../publicar/$nombre.zip" "$nombre")
             else
@@ -81,6 +82,7 @@ jobs:
             fi
           done
           (cd artefactos/motor-wasm && zip -q "../../publicar/ruta-craft-osm-wasm-$VERSION.zip" motor.mjs motor.wasm)
+          zip -qj "publicar/ruta-craft-osm-wasm-$VERSION.zip" LICENSE
           cp artefactos/ruta-craft-osm-multiplataforma/ruta-craft-osm-*.tgz publicar/
           (cd publicar && sha256sum * > SHA256SUMS.txt)
           ls -la publicar

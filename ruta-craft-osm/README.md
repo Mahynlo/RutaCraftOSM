@@ -139,3 +139,7 @@ asarUnpack:
 ## Más información
 
 Documentación completa, formato del grafo, rendimiento medido y referencia de la CLI: [github.com/Mahynlo/RutaCraftOSM](https://github.com/Mahynlo/RutaCraftOSM).
+
+## Licencia
+
+Código bajo la licencia MIT (ver `LICENSE`). Los grafos (el incluido y los que genera `generarGrafo()`) son datos de OpenStreetMap: © colaboradores de OpenStreetMap, licencia [ODbL](https://www.openstreetmap.org/copyright).

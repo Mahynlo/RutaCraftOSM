@@ -191,4 +191,10 @@ Para consultar la guía técnica completa, revisa la carpeta [`docs/`](./docs/RE
 
 La primera versión del proyecto, en Python, se conserva como referencia histórica en [`RutaCraftOSM/`](./RutaCraftOSM/README.md), junto con las [libretas](./Libretas/) donde se pensó originalmente.
 
-Los datos de los grafos provienen de OpenStreetMap y están bajo la licencia [ODbL](https://www.openstreetmap.org/copyright) (© colaboradores de OpenStreetMap).
+---
+
+## 📄 Licencia
+
+El código (motor C++, paquete TypeScript, demo y documentación) está bajo la licencia [MIT](./LICENSE), © 2026 [Mahynlo](https://github.com/Mahynlo).
+
+Los grafos incluidos y los que genera la herramienta se derivan de OpenStreetMap: © colaboradores de OpenStreetMap, bajo la licencia [ODbL](https://www.openstreetmap.org/copyright). Si distribuyes o usas públicamente un grafo (por ejemplo, en un mapa de tu aplicación), muestra esa atribución.
