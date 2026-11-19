@@ -14,6 +14,8 @@ Usa solo dos lenguajes:
 **[▶ Pruébalo en el navegador](https://mahynlo.github.io/RutaCraftOSM/demo.html)**: el motor WebAssembly calcula las rutas en tu equipo y puede generar el grafo de la zona que estés viendo en el mapa.
 
 
+https://github.com/user-attachments/assets/ef1f2c0d-86e3-40b5-8004-024a495f4cf8
+
 ---
 
 ## 🎯 Alcance
