@@ -24,6 +24,12 @@ static_assert(sizeof(Coordenada) == 2 * sizeof(double) && std::is_trivially_copy
 // Grafo vial en formato CSR (Compressed Sparse Row): las aristas del nodo u ocupan las posiciones
 // [inicio_aristas[u], inicio_aristas[u + 1]) de los arreglos destino, peso y nombre_id. Cada nombre
 // de calle se guarda una sola vez en `nombres`; nombres[0] es "" (calle sin nombre).
+// Posición plana en metros respecto al centro del grafo (ver Grafo::preparar_plano)
+struct PuntoPlano {
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
 struct Grafo {
     std::vector<int64_t> osm_ids;          // OSM ID de cada nodo
     std::vector<Coordenada> coords;        // Coordenadas lat/lon
@@ -36,6 +42,9 @@ struct Grafo {
 
     // (osm_id, índice) ordenado por osm_id, para traducir los IDs del caché
     std::vector<std::pair<int64_t, int>> indice_osm_ordenado;
+
+    // Proyección plana para la heurística de A* (se calcula al cargar, no se guarda en el archivo)
+    std::vector<PuntoPlano> plano;
 
     size_t num_nodos() const { return coords.size(); }
     size_t num_aristas() const { return destino.size(); }
@@ -65,6 +74,13 @@ struct Grafo {
         for (size_t i = 0; i < osm_ids.size(); ++i) indice_osm_ordenado[i] = {osm_ids[i], static_cast<int>(i)};
         std::sort(indice_osm_ordenado.begin(), indice_osm_ordenado.end());
     }
+
+    // Proyecta cada nodo a metros con una proyección equirrectangular de escala fija. La escala
+    // del eje x es el coseno de la latitud más alejada del ecuador que haya en el grafo, el menor de
+    // todos: así la distancia plana entre dos nodos nunca supera la equirrectangular con la latitud
+    // media, y la heurística sigue siendo admisible (ver distancia_plana en geo_utils.hpp). Las
+    // posiciones son relativas al centro del grafo para que quepan en float con precisión milimétrica.
+    void preparar_plano();
 
     // Índice interno del nodo con ese OSM ID, o -1
     int indice_osm(int64_t osm_id) const {

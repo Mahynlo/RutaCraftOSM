@@ -36,6 +36,9 @@ inline std::vector<int> tramo_desde_cache(const Grafo& grafo, const std::vector<
     return tramo;
 }
 
+// Al optimizar con hasta estas paradas se guardan los caminos de la matriz de distancias
+constexpr size_t MAX_PARADAS_CON_CAMINOS = 200;
+
 struct OpcionesRuta {
     bool optimizar = false;    // Reordenar las paradas para minimizar la distancia (la primera es el inicio)
     bool regresar = false;     // Terminar en el punto de inicio
@@ -63,6 +66,7 @@ inline json calcular_ruta(const Grafo& grafo, const KDTree& kdtree, GestorCache&
     }
 
     // Orden de visita: índices de puntos_entrada (el inicio se repite al final si se regresa)
+    std::vector<std::vector<std::vector<int>>> caminos_matriz;  // [i][j]: camino entre paradas de entrada
     std::vector<int> orden(puntos_entrada.size());
     for (size_t i = 0; i < orden.size(); ++i) orden[i] = static_cast<int>(i);
     json j_optimizacion = nullptr;
@@ -70,7 +74,11 @@ inline json calcular_ruta(const Grafo& grafo, const KDTree& kdtree, GestorCache&
     if (opciones.optimizar) {
         const ModoOrden modo = opciones.regresar ? ModoOrden::Regresar
                              : opciones.fijar_final ? ModoOrden::FijarFinal : ModoOrden::Abierto;
-        const ResultadoOrden r = OptimizadorOrden::optimizar(OptimizadorOrden::matriz(grafo, nodos_entrada), modo);
+        // Los caminos de la matriz se reutilizan como tramos de la ruta (evita repetir A*). Con
+        // muchas paradas se omiten: guardar N² caminos ocuparía demasiada memoria.
+        const bool guardar_caminos = nodos_entrada.size() <= MAX_PARADAS_CON_CAMINOS;
+        const ResultadoOrden r = OptimizadorOrden::optimizar(
+            OptimizadorOrden::matriz(grafo, nodos_entrada, guardar_caminos ? &caminos_matriz : nullptr), modo);
         orden = r.orden;
         j_optimizacion = {
             {"distancia_original_m", std::round(r.distancia_original * 10.0) / 10.0},
@@ -110,13 +118,13 @@ inline json calcular_ruta(const Grafo& grafo, const KDTree& kdtree, GestorCache&
         }
 
         if (segmento.empty()) {
-            segmento = Enrutador::astar(grafo, u, v);
+            if (!caminos_matriz.empty()) segmento = caminos_matriz[orden[i - 1]][orden[i]];
+            if (segmento.empty()) segmento = Enrutador::astar(grafo, u, v);
             if (!segmento.empty()) {
                 std::vector<int64_t> ruta_osm;
-                for (int idx : segmento) {
-                    ruta_osm.push_back(grafo.osm_ids[idx]);
-                }
-                cache_gestor.cache[clave] = ruta_osm;
+                ruta_osm.reserve(segmento.size());
+                for (int idx : segmento) ruta_osm.push_back(grafo.osm_ids[idx]);
+                cache_gestor.cache[clave] = std::move(ruta_osm);
             }
         }
 

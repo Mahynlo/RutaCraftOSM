@@ -10,13 +10,13 @@ Está pensada para aplicaciones que necesitan rutas en su propia zona de trabajo
 
 | Servidor de ruteo (OSRM, etc.) | RutaCraftOSM |
 | :--- | :--- |
-| Se instala y mantiene un servicio aparte (normalmente con Docker) y se preprocesa un mapa regional o de un país completo. | Un ejecutable incluido en el paquete npm y un archivo de grafo de pocos MB solo de la zona que se necesita. |
-| La app depende de una conexión al servidor. | Corre dentro de la app, sin red. |
+| Se instala y mantiene un servicio aparte (normalmente con Docker) y se preprocesa un mapa regional o de un país completo. | Un ejecutable (o un módulo WebAssembly de 317 KB) incluido en el paquete npm y un archivo de grafo de pocos MB solo de la zona que se necesita. |
+| La app depende de una conexión al servidor. | Corre dentro de la app o del navegador, sin red. |
 | Perfiles de vehículo, tiempos, tráfico y restricciones de giro. | Ruta más corta en distancia: lo necesario para recorrer una lista de paradas. |
 
 Para usarla en una zona nueva:
 
-1. Se genera el grafo de esa zona con el script de Python ([2. Pipeline Python](./2_IMPLEMENTACION_PYTHON_UV.md)).
+1. Se genera el grafo de esa zona con `npx ruta-craft-osm generar` ([2. Generador de grafos](./2_GENERADOR_DE_GRAFOS.md)).
 2. Se pasa el archivo con la opción `grafo`.
 
 El paquete incluye como ejemplo el grafo de Mazatán y Villa Pesqueira (Sonora), de unos 25 mil nodos y 1.3 MB. El benchmark también usa el de la ciudad de Hermosillo, de unos 75 mil nodos.
@@ -44,8 +44,8 @@ La versión actual es intencionalmente simple. Varias de estas limitaciones son 
 
 | Limitación | Detalle | Posible mejora |
 | :--- | :--- | :--- |
-| Distancia, no tiempo | El peso de cada calle es su longitud en metros. No hay velocidades, jerarquía de vías ni tráfico, y no se estima la hora de llegada. | Exportar en el grafo un peso por tiempo (OSMnx puede estimar velocidades y `travel_time` por calle) y elegir el criterio al calcular. |
-| Sentidos de las calles | El grafo de ejemplo los ignora y una ruta puede ir en contrasentido. | El motor ya acepta grafos dirigidos: basta generarlos con `respetar_sentido=True` ([2. Pipeline Python](./2_IMPLEMENTACION_PYTHON_UV.md)). |
+| Distancia, no tiempo | El peso de cada calle es su longitud en metros. No hay velocidades, jerarquía de vías ni tráfico, y no se estima la hora de llegada. | Guardar en el grafo un peso por tiempo (estimado con la etiqueta `maxspeed` y el tipo de vía de OSM) y elegir el criterio al calcular. |
+| Sentidos de las calles | El grafo de ejemplo los ignora y una ruta puede ir en contrasentido. | El motor ya acepta grafos dirigidos: basta generarlos con `--respetar-sentido` ([2. Generador de grafos](./2_GENERADOR_DE_GRAFOS.md)). |
 | Sin restricciones de giro | No conoce giros prohibidos ni maniobras restringidas. | Leer las relaciones `restriction` de OpenStreetMap. |
 | Solo automóvil | Se descargan las calles transitables en auto (`network_type="drive"`). | Generar grafos con otros perfiles (`walk`, `bike`). |
 | Ajuste al nodo más cercano | Cada parada se ajusta al nodo del grafo más cercano (cruce o punto de una calle), no a la posición exacta sobre la calle. | Proyectar la parada sobre la arista más cercana. |
@@ -60,28 +60,29 @@ Este enfoque sirve cuando las rutas son de unas decenas de paradas dentro de una
 
 ## 1. Visión General del Sistema
 
-**RutaCraftOSM** separa en tres capas la preparación de los datos (una vez, con Python), el cálculo de rutas (C++) y su uso desde la app (npm):
+**RutaCraftOSM** usa dos lenguajes: **TypeScript** para preparar los datos y consumir el motor, y **C++** para calcular las rutas. El mismo código C++ se compila como ejecutable nativo (Node/Electron) y como WebAssembly (navegador):
 
 ```mermaid
 flowchart TB
-    subgraph Capa_Preparacion ["1. Preparación de datos (Python + uv)"]
+    subgraph Capa_Preparacion ["1. Preparación de datos (TypeScript, una vez)"]
         direction LR
-        OSM["OpenStreetMap<br/>(Overpass API)"] -->|OSMnx + GeoPandas| PREP["preparar_grafo.py"]
+        OSM["OpenStreetMap<br/>(Overpass API)"] -->|fetch| PREP["ruta-craft-osm generar"]
         PREP -->|genera| BIN["grafo_zona.bin<br/>(formato RCO2)"]
     end
 
-    subgraph Capa_Motor ["2. Motor de ruteo (C++ nativo, cli.exe)"]
+    subgraph Capa_Motor ["2. Motor de ruteo (C++20)"]
         direction LR
         KDTREE["KD-Tree<br/>snapping O(log N)"] --> ASTAR["A* sobre<br/>grafo CSR"] --> INST["Instrucciones<br/>giro a giro"]
     end
 
-    subgraph Capa_Consumo ["3. Consumo en aplicaciones (Node.js / Electron)"]
+    subgraph Capa_Consumo ["3. Consumo (ruta-craft-osm)"]
         direction LR
-        WRAPPER["ruta-craft-osm<br/>(TypeScript)"] -->|resuelve la promesa| APP["App de escritorio<br/>(p. ej. AguaVP)"]
+        NATIVO["Node / Electron<br/>cli.exe nativo"] --> APP["App de escritorio<br/>(p. ej. AguaVP)"]
+        WASM["Navegador<br/>motor.wasm en un Web Worker"] --> WEBAPP["Aplicación web"]
     end
 
     Capa_Preparacion -->|"carga del grafo (~2 ms)"| Capa_Motor
-    Capa_Motor <-->|"puntos por stdin / ruta + instrucciones en JSON"| Capa_Consumo
+    Capa_Motor <-->|"peticiones y respuestas JSON"| Capa_Consumo
 ```
 
 ---
@@ -101,7 +102,7 @@ La versión original en Python (empaquetada con Nuitka) presentaba cuellos de bo
 
 ## 3. Validación de la Migración
 
-Para confirmar que el motor C++ reemplaza al de Python sin cambiar los resultados, se ejecutó la comparación automatizada [`comparar_motores.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/tests/comparar_motores.py) sobre **23 paradas GPS distribuidas a lo largo de los municipios de Mazatán y Villa Pesqueira**. La misma verificación (ruta y distancia idénticas) corre en cada push como parte de las pruebas del motor (`TestParidadPython` en `RutaCraftOSM_c/tests/test_cpp_cli.py`).
+Para confirmar que el motor C++ reemplazaba al de Python sin cambiar los resultados, se ejecutó la comparación automatizada [`comparar_motores.py`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/RutaCraftOSM/tests/comparar_motores.py) sobre **23 paradas GPS distribuidas a lo largo de los municipios de Mazatán y Villa Pesqueira**. Esa verificación corrió en cada push mientras existió el motor Python. En la versión 0.2.0 Python dejó de usarse (el generador de grafos pasó a TypeScript) y ahora las pruebas verifican que el motor WebAssembly responda byte a byte igual que el nativo. El código Python original se conserva como referencia histórica en [`RutaCraftOSM/`](https://github.com/Mahynlo/RutaCraftOSM/tree/main/RutaCraftOSM).
 
 ```text
 ============================================================

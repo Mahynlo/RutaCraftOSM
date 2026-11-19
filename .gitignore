@@ -71,5 +71,13 @@ Thumbs.db
 [Dd]esktop.ini
 .DS_Store
 
-# Grafos grandes del benchmark (Hermosillo, Sonora): se generan con generar_grafos_benchmark.py
+# Grafos grandes del benchmark (Hermosillo, Sonora): se generan con `ruta-craft-osm generar`
+# (ver RutaCraftOSM_c/bench/correr_benchmark.mjs)
+datos/benchmark/
+
+# Motor WebAssembly: lo genera Emscripten (npm run build:wasm) y se publica dentro de dist/esm/wasm
+ruta-craft-osm/wasm/
+build-wasm/
+
+# Grafos del benchmark que generaba la versión en Python (RutaCraftOSM/generar_grafos_benchmark.py)
 RutaCraftOSM/grafos/benchmark/

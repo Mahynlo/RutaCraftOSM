@@ -1,16 +1,14 @@
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
+import {
+    CodigoErrorRuta, ErrorRutaCraft, OpcionesOrden, RespuestaRutaCompleta, RespuestaServidor, ResultadoRuta,
+    validarEntrada,
+} from "./comun/tipos";
 
-/** Opciones de orden de las paradas (las acepta calcularRuta() y motor.calcular()). */
-export interface OpcionesOrden {
-    /** Reordenar las paradas para minimizar la distancia. La primera parada siempre es el inicio. */
-    optimizar?: boolean;
-    /** Terminar la ruta en el punto de inicio (con o sin optimizar). */
-    regresarAlInicio?: boolean;
-    /** Al optimizar, mantener la última parada al final. No se combina con regresarAlInicio. */
-    fijarFinal?: boolean;
-}
+export * from "./comun/tipos";
+// Generador de grafos (también disponible como "ruta-craft-osm/generador" y en la CLI)
+export * from "./generador";
 
 export interface CalcularRutaOptions extends OpcionesOrden {
     puntos: [number, number][];
@@ -25,57 +23,6 @@ export interface MotorRutasOptions {
     cachePath?: string;       // Se lee al iniciar y se guarda al llamar cerrar()
     saveCache?: boolean;      // Si es false, el caché solo vive en memoria (default: true)
     timeoutMs?: number;       // Tiempo máximo por petición (default: 30000)
-}
-
-export interface InstruccionNavegacion {
-    accion: string;
-    calle: string;
-    desde: [number, number];
-    hacia: [number, number];
-    distancia_m: number;
-}
-
-export interface ResultadoOptimizacion {
-    /** Distancia por la red en el orden recibido (metros). */
-    distancia_original_m: number;
-    /** Distancia por la red en el orden calculado (metros). */
-    distancia_optimizada_m: number;
-    /** "exacto" (hasta 8 paradas libres, se prueban todas las permutaciones) o "heuristico". */
-    metodo: "exacto" | "heuristico";
-}
-
-export interface ResultadoRuta {
-    /** Paradas en orden de visita (si se optimizó o se regresa al inicio, difiere de la entrada). */
-    puntos_gps: [number, number][];
-    ruta: [number, number][];
-    distancia_total_m: number;
-    distancia_total_km: number;
-    instrucciones: InstruccionNavegacion[];
-    /** Índice en la entrada de cada elemento de puntos_gps (solo con optimizar o regresarAlInicio). */
-    orden?: number[];
-    optimizacion?: ResultadoOptimizacion;
-}
-
-export interface RespuestaRutaCompleta {
-    resultado: ResultadoRuta;
-    cache?: Record<string, string[]>;
-}
-
-/** Tipo de error, estable para que la aplicación decida qué mostrar al usuario. */
-export type CodigoErrorRuta =
-    | "ENTRADA_INVALIDA"          // Puntos u opciones inválidos
-    | "GRAFO_INVALIDO"            // El grafo no existe o el archivo es inválido
-    | "SIN_RUTA"                  // Algún tramo no tiene camino posible
-    | "TIMEOUT"                   // Se superó timeoutMs
-    | "PLATAFORMA_NO_SOPORTADA"   // El paquete no incluye el motor para este sistema
-    | "MOTOR_NO_DISPONIBLE"       // No se pudo ejecutar el motor, o terminó inesperadamente
-    | "INTERNO";                  // Error inesperado del motor
-
-export class ErrorRutaCraft extends Error {
-    constructor(public readonly codigo: CodigoErrorRuta, mensaje: string) {
-        super(`❌ ${mensaje}`);
-        this.name = "ErrorRutaCraft";
-    }
 }
 
 // Código de salida de la CLI -> tipo de error (ver RutaCraftOSM_c/include/errores.hpp)
@@ -127,25 +74,6 @@ function getCliExePath(): string {
     }
     binariosVerificados.add(ruta);
     return ruta;
-}
-
-function validarEntrada(puntos: unknown, orden: OpcionesOrden = {}): ErrorRutaCraft | null {
-    if (!Array.isArray(puntos) || puntos.length === 0) {
-        return new ErrorRutaCraft("ENTRADA_INVALIDA", "Debes proporcionar 'puntos' como un array de coordenadas [lat, lon]");
-    }
-    for (let i = 0; i < puntos.length; i++) {
-        const p = puntos[i];
-        if (!Array.isArray(p) || p.length !== 2 || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
-            return new ErrorRutaCraft("ENTRADA_INVALIDA", `El punto ${i} no es un par [lat, lon] numérico válido`);
-        }
-        if (Math.abs(p[0]) > 90 || Math.abs(p[1]) > 180) {
-            return new ErrorRutaCraft("ENTRADA_INVALIDA", `El punto ${i} está fuera de rango: [${p[0]}, ${p[1]}]`);
-        }
-    }
-    if (orden.regresarAlInicio && orden.fijarFinal) {
-        return new ErrorRutaCraft("ENTRADA_INVALIDA", "Las opciones regresarAlInicio y fijarFinal no se pueden combinar");
-    }
-    return null;
 }
 
 function argsComunes(grafo?: string, cachePath?: string, saveCache?: boolean): string[] {
@@ -232,14 +160,6 @@ interface PeticionPendiente {
     resolve: (r: ResultadoRuta) => void;
     reject: (e: Error) => void;
     timer: NodeJS.Timeout;
-}
-
-interface RespuestaServidor {
-    id: number;
-    ok: boolean;
-    resultado?: ResultadoRuta;
-    codigo?: CodigoErrorRuta;
-    error?: string;
 }
 
 /**
@@ -348,6 +268,7 @@ export class MotorRutas {
                 continue; // Línea que no es JSON: se ignora
             }
 
+            if (typeof respuesta.id !== "number") continue; // Las peticiones de este wrapper usan id numérico
             const pendiente = this.pendientes.get(respuesta.id);
             if (!pendiente) continue; // Petición que ya expiró
 

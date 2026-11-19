@@ -1,14 +1,14 @@
 {
-  "fecha": "2026-10-15",
+  "fecha": "2026-11-19",
   "cpu": "AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx",
-  "sistema": "Windows 11",
+  "sistema": "Windows 10.0.26300",
   "grafos": [
     {
       "aristas": 49556,
-      "carga_ms": 1.7,
+      "carga_ms": 2.8,
       "escenarios": [
         {
-          "astar_ms": 0.003,
+          "astar_ms": 0.002,
           "astar_nodos": 30,
           "distancia_km": 0.57,
           "instrucciones": {
@@ -21,7 +21,7 @@
               "Gira a la derecha en desconocida (19 m)",
               "Gira a la izquierda en desconocida (62 m)"
             ],
-            "pct_distancia_calle_desconocida": 100.0,
+            "pct_distancia_calle_desconocida": 100,
             "recto": 1,
             "total": 3
           },
@@ -29,20 +29,21 @@
           "nombre": "Ruta corta (3 paradas)",
           "puntos": 3,
           "snap_max_m": 34.3,
-          "snapping_ms": 0.015,
-          "total_ms": 0.046,
-          "total_ms_min": 0.045,
-          "proceso_cli_ms": 24.6
+          "snapping_ms": 0.023,
+          "total_ms": 0.052,
+          "total_ms_min": 0.043,
+          "wasm_ms": 0.386,
+          "proceso_cli_ms": 30.4
         },
         {
-          "astar_ms": 0.096,
+          "astar_ms": 0.142,
           "astar_nodos": 479,
           "distancia_km": 14.71,
           "instrucciones": {
-            "con_calle_desconocida": 13,
+            "con_calle_desconocida": 14,
             "derecha": 9,
             "izquierda": 10,
-            "m_por_instruccion": 612.8,
+            "m_por_instruccion": 565.6,
             "muestra": [
               "Sigue recto en desconocida (491 m)",
               "Gira a la derecha en desconocida (19 m)",
@@ -51,20 +52,22 @@
               "Gira a la derecha en desconocida (43 m)",
               "Gira a la izquierda en Calle Benito Juárez (295 m)"
             ],
-            "pct_distancia_calle_desconocida": 92.0,
-            "recto": 5,
-            "total": 24
+            "pct_distancia_calle_desconocida": 22.9,
+            "recto": 7,
+            "total": 26
           },
           "nodos_ruta": 458,
           "nombre": "Ruta municipal (23 paradas)",
           "puntos": 23,
           "snap_max_m": 60.3,
-          "snapping_ms": 0.03,
-          "total_ms": 0.506,
-          "total_ms_min": 0.476,
-          "proceso_cli_ms": 25.8,
+          "snapping_ms": 0.038,
+          "total_ms": 0.766,
+          "total_ms_min": 0.666,
+          "wasm_ms": 3.229,
+          "proceso_cli_ms": 28.8,
           "optimizado": {
-            "proceso_cli_ms": 34.6,
+            "proceso_cli_ms": 35.4,
+            "wasm_ms": 12.648,
             "distancia_km": 14.68,
             "metodo": "heuristico"
           }
@@ -72,18 +75,19 @@
       ],
       "grafo": "grafo_mazatan_villapesqueira.bin",
       "kdtree_ms": 3.3,
-      "memoria_pico_mb": 7.9,
+      "memoria_pico_mb": 8.2,
       "nodos": 24465,
       "repeticiones": 5,
       "tamano_mb": 1.3,
-      "etiqueta": "Mazatán - Villa Pesqueira"
+      "etiqueta": "Mazatán - Villa Pesqueira",
+      "wasm_carga_ms": 31.3
     },
     {
       "aristas": 177664,
-      "carga_ms": 5.4,
+      "carga_ms": 9.4,
       "escenarios": [
         {
-          "astar_ms": 2.575,
+          "astar_ms": 2.679,
           "astar_nodos": 367,
           "distancia_km": 14.9,
           "instrucciones": {
@@ -107,13 +111,14 @@
           "nombre": "Cruce norte-sur (2 puntos)",
           "puntos": 2,
           "snap_max_m": 285.1,
-          "snapping_ms": 0.027,
-          "total_ms": 2.688,
-          "total_ms_min": 2.586,
-          "proceso_cli_ms": 46.0
+          "snapping_ms": 0.028,
+          "total_ms": 3.083,
+          "total_ms_min": 2.771,
+          "wasm_ms": 4.311,
+          "proceso_cli_ms": 48.6
         },
         {
-          "astar_ms": 1.321,
+          "astar_ms": 1.43,
           "astar_nodos": 273,
           "distancia_km": 10.47,
           "instrucciones": {
@@ -137,13 +142,14 @@
           "nombre": "Centro al aeropuerto (2 puntos)",
           "puntos": 2,
           "snap_max_m": 394.9,
-          "snapping_ms": 0.01,
-          "total_ms": 1.562,
-          "total_ms_min": 1.551,
-          "proceso_cli_ms": 41.3
+          "snapping_ms": 0.013,
+          "total_ms": 1.639,
+          "total_ms_min": 1.573,
+          "wasm_ms": 2.852,
+          "proceso_cli_ms": 47.1
         },
         {
-          "astar_ms": 0.565,
+          "astar_ms": 0.631,
           "astar_nodos": 817,
           "distancia_km": 32.02,
           "instrucciones": {
@@ -167,25 +173,27 @@
           "nombre": "Ruta de lectura en una colonia (25 paradas)",
           "puntos": 25,
           "snap_max_m": 163.1,
-          "snapping_ms": 0.054,
-          "total_ms": 1.779,
-          "total_ms_min": 1.716,
-          "proceso_cli_ms": 41.3,
+          "snapping_ms": 0.065,
+          "total_ms": 1.962,
+          "total_ms_min": 1.61,
+          "wasm_ms": 3.45,
+          "proceso_cli_ms": 48.6,
           "optimizado": {
-            "proceso_cli_ms": 51.9,
+            "proceso_cli_ms": 52.2,
+            "wasm_ms": 14.634,
             "distancia_km": 10.72,
             "metodo": "heuristico"
           }
         },
         {
-          "astar_ms": 50.943,
+          "astar_ms": 50.994,
           "astar_nodos": 10478,
           "distancia_km": 441.34,
           "instrucciones": {
             "con_calle_desconocida": 224,
             "derecha": 249,
             "izquierda": 443,
-            "m_por_instruccion": 512.0,
+            "m_por_instruccion": 512,
             "muestra": [
               "Sigue recto en desconocida (327 m)",
               "Gira a la derecha en Boulevard Enrique Mazón López (1604 m)",
@@ -202,31 +210,34 @@
           "nombre": "Recorrido por toda la ciudad (50 paradas)",
           "puntos": 50,
           "snap_max_m": 1139.6,
-          "snapping_ms": 0.24,
-          "total_ms": 66.65,
-          "total_ms_min": 64.6,
-          "proceso_cli_ms": 114.8,
+          "snapping_ms": 0.207,
+          "total_ms": 71.591,
+          "total_ms_min": 66.694,
+          "wasm_ms": 83.421,
+          "proceso_cli_ms": 121,
           "optimizado": {
-            "proceso_cli_ms": 536.2,
+            "proceso_cli_ms": 120.3,
+            "wasm_ms": 507.744,
             "distancia_km": 116.96,
             "metodo": "heuristico"
           }
         }
       ],
       "grafo": "grafo_hermosillo.bin",
-      "kdtree_ms": 13.2,
-      "memoria_pico_mb": 19.1,
+      "kdtree_ms": 14.8,
+      "memoria_pico_mb": 19.9,
       "nodos": 74839,
       "repeticiones": 5,
       "tamano_mb": 4.3,
-      "etiqueta": "Ciudad de Hermosillo"
+      "etiqueta": "Ciudad de Hermosillo",
+      "wasm_carga_ms": 30.7
     },
     {
       "aristas": 150958,
-      "carga_ms": 6.6,
+      "carga_ms": 10.6,
       "escenarios": [
         {
-          "astar_ms": 2.033,
+          "astar_ms": 2.115,
           "astar_nodos": 348,
           "distancia_km": 15.03,
           "instrucciones": {
@@ -250,20 +261,21 @@
           "nombre": "Cruce norte-sur (2 puntos)",
           "puntos": 2,
           "snap_max_m": 285.1,
-          "snapping_ms": 0.018,
-          "total_ms": 2.311,
-          "total_ms_min": 2.286,
-          "proceso_cli_ms": 41.3
+          "snapping_ms": 0.03,
+          "total_ms": 2.743,
+          "total_ms_min": 2.497,
+          "wasm_ms": 3.75,
+          "proceso_cli_ms": 49
         },
         {
-          "astar_ms": 1.039,
+          "astar_ms": 0.933,
           "astar_nodos": 307,
           "distancia_km": 11.04,
           "instrucciones": {
             "con_calle_desconocida": 5,
             "derecha": 6,
             "izquierda": 6,
-            "m_por_instruccion": 581.0,
+            "m_por_instruccion": 581,
             "muestra": [
               "Sigue recto en Rosales (258 m)",
               "Gira a la derecha en desconocida (168 m)",
@@ -280,13 +292,14 @@
           "nombre": "Centro al aeropuerto (2 puntos)",
           "puntos": 2,
           "snap_max_m": 394.9,
-          "snapping_ms": 0.009,
-          "total_ms": 1.254,
-          "total_ms_min": 1.247,
-          "proceso_cli_ms": 39.8
+          "snapping_ms": 0.015,
+          "total_ms": 1.37,
+          "total_ms_min": 1.27,
+          "wasm_ms": 2.324,
+          "proceso_cli_ms": 47.8
         },
         {
-          "astar_ms": 0.644,
+          "astar_ms": 0.559,
           "astar_nodos": 874,
           "distancia_km": 35.9,
           "instrucciones": {
@@ -310,18 +323,20 @@
           "nombre": "Ruta de lectura en una colonia (25 paradas)",
           "puntos": 25,
           "snap_max_m": 163.1,
-          "snapping_ms": 0.056,
-          "total_ms": 1.908,
-          "total_ms_min": 1.867,
-          "proceso_cli_ms": 42.0,
+          "snapping_ms": 0.076,
+          "total_ms": 2.169,
+          "total_ms_min": 1.963,
+          "wasm_ms": 3.463,
+          "proceso_cli_ms": 53,
           "optimizado": {
-            "proceso_cli_ms": 55.3,
+            "proceso_cli_ms": 51.4,
+            "wasm_ms": 15.982,
             "distancia_km": 13.16,
             "metodo": "heuristico"
           }
         },
         {
-          "astar_ms": 48.562,
+          "astar_ms": 48.724,
           "astar_nodos": 11079,
           "distancia_km": 459.4,
           "instrucciones": {
@@ -345,24 +360,27 @@
           "nombre": "Recorrido por toda la ciudad (50 paradas)",
           "puntos": 50,
           "snap_max_m": 1139.6,
-          "snapping_ms": 0.246,
-          "total_ms": 64.004,
-          "total_ms_min": 61.427,
-          "proceso_cli_ms": 117.1,
+          "snapping_ms": 0.247,
+          "total_ms": 63.682,
+          "total_ms_min": 62.188,
+          "wasm_ms": 78.809,
+          "proceso_cli_ms": 116.5,
           "optimizado": {
-            "proceso_cli_ms": 508.8,
+            "proceso_cli_ms": 121.3,
+            "wasm_ms": 492.061,
             "distancia_km": 118.23,
             "metodo": "heuristico"
           }
         }
       ],
       "grafo": "grafo_hermosillo_dirigido.bin",
-      "kdtree_ms": 14.9,
-      "memoria_pico_mb": 18.8,
+      "kdtree_ms": 14.7,
+      "memoria_pico_mb": 19.6,
       "nodos": 74839,
       "repeticiones": 5,
-      "tamano_mb": 4.0,
-      "etiqueta": "Ciudad de Hermosillo (respetando sentidos)"
+      "tamano_mb": 4,
+      "etiqueta": "Ciudad de Hermosillo (respetando sentidos)",
+      "wasm_carga_ms": 31.8
     }
   ]
 }

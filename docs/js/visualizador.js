@@ -2,7 +2,7 @@
  * RutaCraftOSM - Visualizador de Rutas del Benchmark (Leaflet Logic)
  *
  * Muestra las rutas que calculó el motor C++ en cada escenario del benchmark
- * (datos en js/rutas_benchmark.js, generado por RutaCraftOSM_c/bench/correr_benchmark.py)
+ * (datos en js/rutas_benchmark.js, generado por RutaCraftOSM_c/bench/correr_benchmark.mjs)
  * y compara la ruta ignorando los sentidos de las calles contra la que los respeta.
  */
 
@@ -53,7 +53,7 @@ function initMap() {
     });
 
     if (ESCENARIOS.length === 0) {
-        setText('bench-meta', 'No hay rutas: ejecuta RutaCraftOSM_c/bench/correr_benchmark.py para generarlas.');
+        setText('bench-meta', 'No hay rutas: ejecuta RutaCraftOSM_c/bench/correr_benchmark.mjs para generarlas.');
         return;
     }
 

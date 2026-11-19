@@ -1,14 +1,6 @@
-#include "../include/types.hpp"
-#include "../include/geo_utils.hpp"
-#include "../include/kdtree.hpp"
-#include "../include/astar.hpp"
-#include "../include/instrucciones.hpp"
-#include "../include/grafo.hpp"
-#include "../include/cache.hpp"
-#include "../include/json.hpp"
-#include "../include/ruta.hpp"
 #include "../include/archivos.hpp"
 #include "../include/errores.hpp"
+#include "../include/motor.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -62,55 +54,13 @@ inline bool es_opcion_cli(const std::string& s) {
     return false;
 }
 
-// Interpreta un array JSON [[lat, lon], ...]; ignora elementos mal formados
-std::vector<Coordenada> puntos_desde_json(const json& j_puntos) {
-    std::vector<Coordenada> puntos;
-    if (j_puntos.is_array()) {
-        for (const auto& item : j_puntos) {
-            if (item.is_array() && item.size() == 2 && item[0].is_number() && item[1].is_number()) {
-                puntos.push_back({item[0].get<double>(), item[1].get<double>()});
-            }
-        }
-    }
-    return puntos;
-}
-
-// Modo servidor: el grafo se carga una sola vez y cada línea de stdin es una petición
-//   entrada: {"id": 1, "puntos": [[lat, lon], ...], "optimizar": false, "regresar": false, "fijar_final": false}
-//   salida:  {"id": 1, "ok": true, "resultado": {...}}
-//            {"id": 1, "ok": false, "codigo": "SIN_RUTA", "error": "..."}
-// Al cerrarse stdin se guarda el caché (si aplica) y el proceso termina.
-int ejecutar_servidor(const Grafo& grafo, const KDTree& kdtree, GestorCache& cache_gestor) {
+// Modo servidor: el grafo se carga una sola vez y cada línea de stdin es una petición (protocolo
+// en Motor::responder). Al cerrarse stdin se guarda el caché (si aplica) y el proceso termina.
+int ejecutar_servidor(Motor& motor) {
     std::string linea;
     while (std::getline(std::cin, linea)) {
         if (linea.find_first_not_of(" \t\r\n") == std::string::npos) continue;
-
-        json id = nullptr;
-        json respuesta;
-        try {
-            json peticion;
-            try {
-                peticion = json::parse(linea);
-            } catch (const std::exception& e) {
-                throw ErrorRuta(CodigoError::EntradaInvalida, std::string("Peticion JSON invalida: ") + e.what());
-            }
-            if (!peticion.is_object()) throw ErrorRuta(CodigoError::EntradaInvalida, "La peticion debe ser un objeto JSON");
-            if (peticion.contains("id")) id = peticion["id"];
-
-            OpcionesRuta opciones;
-            opciones.optimizar = peticion.value("optimizar", false);
-            opciones.regresar = peticion.value("regresar", false);
-            opciones.fijar_final = peticion.value("fijar_final", false);
-
-            std::vector<Coordenada> puntos = puntos_desde_json(peticion.value("puntos", json::array()));
-            respuesta = {{"id", id}, {"ok", true}, {"resultado", calcular_ruta(grafo, kdtree, cache_gestor, puntos, opciones)}};
-        } catch (const ErrorRuta& e) {
-            respuesta = {{"id", id}, {"ok", false}, {"codigo", nombre_codigo(e.codigo())}, {"error", e.what()}};
-        } catch (const std::exception& e) {
-            respuesta = {{"id", id}, {"ok", false}, {"codigo", nombre_codigo(CodigoError::Interno)}, {"error", e.what()}};
-        }
-
-        std::cout << respuesta.dump(-1, ' ', false, json::error_handler_t::replace) << "\n" << std::flush;
+        std::cout << Motor::serializar(motor.responder(linea)) << "\n" << std::flush;
     }
     return 0;
 }
@@ -235,28 +185,19 @@ int ejecutar(const std::vector<std::string>& argv) {
         throw ErrorRuta(CodigoError::EntradaInvalida, "Lista de puntos GPS vacia");
     }
 
-    // Cargar Grafo
+    // Cargar grafo y caché
+    Motor motor;
     const fs::path ruta_real_grafo = resolver_ruta_grafo(grafo_path);
-    Grafo grafo;
-    if (!CargadorGrafo::cargar(ruta_real_grafo, grafo)) {
-        throw ErrorRuta(CodigoError::GrafoInvalido,
-                        "El archivo '" + a_utf8(ruta_real_grafo) + "' no existe o formato no valido.");
-    }
-
-    // Cargar Caché
-    GestorCache cache_gestor;
-    cache_gestor.cargar(cache_arg);
-
-    // Construcción del índice espacial KD-Tree
-    KDTree kdtree(grafo.coords);
+    motor.cargar_archivo(ruta_real_grafo, a_utf8(ruta_real_grafo));
+    motor.cache.cargar(cache_arg);
 
     int codigo_salida = 0;
     json resultado;
 
     if (modo_servidor) {
-        codigo_salida = ejecutar_servidor(grafo, kdtree, cache_gestor);
+        codigo_salida = ejecutar_servidor(motor);
     } else {
-        resultado = calcular_ruta(grafo, kdtree, cache_gestor, puntos_gps, opciones);
+        resultado = motor.calcular(puntos_gps, opciones);
     }
 
     // Guardar cache si aplica
@@ -268,7 +209,7 @@ int ejecutar(const std::vector<std::string>& argv) {
         } catch (...) {}
 
         if (!es_json_directo && !cache_arg.empty()) {
-            cache_gestor.guardar(cache_arg);
+            motor.cache.guardar(cache_arg);
         }
     }
 
@@ -278,7 +219,7 @@ int ejecutar(const std::vector<std::string>& argv) {
     if (!salida_path.empty()) {
         std::ofstream file_out(ruta_utf8(salida_path));
         if (file_out.is_open()) {
-            file_out << resultado.dump(2);
+            file_out << Motor::serializar(resultado, 2);
         }
     }
 
@@ -286,11 +227,11 @@ int ejecutar(const std::vector<std::string>& argv) {
     if (flag_stdout) {
         json full_output = {
             {"resultado", resultado},
-            {"cache", cache_gestor.a_json()}
+            {"cache", motor.cache.a_json()}
         };
-        std::cout << full_output.dump(2) << std::endl;
+        std::cout << Motor::serializar(full_output, 2) << std::endl;
     } else if (salida_path.empty()) {
-        std::cout << resultado.dump(2) << std::endl;
+        std::cout << Motor::serializar(resultado, 2) << std::endl;
     }
 
     return 0;

@@ -1,11 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2019",
+    "target": "ES2020",
     "module": "commonjs",
+    "lib": ["ES2020", "DOM"],
     "declaration": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/web", "src/wasm", "src/**/*.cjs"]
 }

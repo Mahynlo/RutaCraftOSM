@@ -1,28 +1,58 @@
 {
   "name": "ruta-craft-osm",
-  "version": "0.1.0",
-  "description": "Rutas de múltiples puntos sin conexión sobre un grafo de OpenStreetMap de tu zona, sin servidor de ruteo: motor en C++ para Node.js y Electron.",
+  "version": "0.2.0",
+  "description": "Rutas de múltiples puntos sin conexión sobre un grafo de OpenStreetMap de tu zona, sin servidor de ruteo: motor en C++ nativo para Node/Electron y WebAssembly para el navegador, con generador de grafos incluido.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./generador": {
+      "import": {
+        "types": "./dist/esm/generador/index.d.ts",
+        "default": "./dist/esm/generador/index.js"
+      },
+      "require": {
+        "types": "./dist/generador/index.d.ts",
+        "default": "./dist/generador/index.js"
+      }
+    },
+    "./web": {
+      "types": "./dist/esm/web/index.d.ts",
+      "default": "./dist/esm/web/index.js"
+    },
+    "./grafo-incluido.bin": "./bin/grafos/grafo_mazatan_villapesqueira.bin",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "ruta-craft-osm": "dist/cli.js"
+  },
   "files": [
     "dist",
     "bin",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && node scripts/copiar-wasm.mjs",
+    "build:wasm": "emcmake cmake -S ../RutaCraftOSM_c -B ../RutaCraftOSM_c/build-wasm -DCMAKE_BUILD_TYPE=Release && cmake --build ../RutaCraftOSM_c/build-wasm",
     "prepack": "npm run build",
-    "test": "npm run build && node --test src/test-motor.cjs",
-    "demo": "npm run build && node src/test-calcularRuta.cjs"
+    "test": "npm run build && node --test \"test/*.test.*\"",
+    "demo": "npm run build && node scripts/demo.cjs",
+    "demo:web": "npm run build && node scripts/preparar-demo.mjs"
   },
   "keywords": [
-    "rutas",
+    "a-star",
+    "electron",
+    "generador",
+    "navegacion",
+    "offline",
     "openstreetmap",
     "osm",
-    "a-star",
-    "navegacion",
-    "electron",
-    "offline"
+    "rutas",
+    "wasm",
+    "webassembly"
   ],
   "repository": {
     "type": "git",

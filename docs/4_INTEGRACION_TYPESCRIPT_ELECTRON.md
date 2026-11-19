@@ -1,6 +1,6 @@
-# 📦 4. Integración TypeScript y Electron (`ruta-craft-osm`)
+# 📦 4. Integración TypeScript, Electron y Navegador (`ruta-craft-osm`)
 
-El paquete **`ruta-craft-osm`** es el *wrapper* tipado en TypeScript que lanza el motor C++ desde Node.js o desde el proceso *main* de Electron (no desde el *renderer*, que no puede lanzar procesos). Por ejemplo, AguaVP lo usa en `src/generador_rutas/generar_ruta.js` para generar sus rutas de lectura de medidores.
+El paquete **`ruta-craft-osm`** es el *wrapper* tipado en TypeScript que lanza el motor C++ nativo desde Node.js o desde el proceso *main* de Electron (no desde el *renderer*, que no puede lanzar procesos). Para el navegador (o el *renderer*) incluye el mismo motor compilado a WebAssembly: ver la [sección 5](#5-navegador-webassembly). Por ejemplo, AguaVP lo usa en `src/generador_rutas/generar_ruta.js` para generar sus rutas de lectura de medidores.
 
 ---
 
@@ -274,7 +274,41 @@ console.log(`${ruta.optimizacion.distancia_original_m} m -> ${ruta.optimizacion.
 const medidoresEnOrden = ruta.orden.map(i => medidores[i]);
 ```
 
-Con hasta 9 paradas el orden es el óptimo exacto; con más, una heurística (vecino más cercano + 2-opt + Or-opt) que nunca empeora el orden recibido. Una ruta de 50 paradas en toda la ciudad de Hermosillo se optimiza en ~0.5 s. Detalles del algoritmo en [3. Motor C++](./3_MOTOR_CPP_RUTACRAFT.md#8-optimización-del-orden-de-las-paradas).
+Con hasta 9 paradas el orden es el óptimo exacto; con más, una heurística (vecino más cercano + 2-opt + Or-opt) que nunca empeora el orden recibido. Una ruta de 50 paradas en toda la ciudad de Hermosillo se optimiza en ~0.1 s con el motor nativo (~0.5 s con WebAssembly). Detalles del algoritmo en [3. Motor C++](./3_MOTOR_CPP_RUTACRAFT.md#8-optimización-del-orden-de-las-paradas).
 
 > [!NOTE]
 > Los cambios de cada versión del paquete están en [`ruta-craft-osm/CHANGELOG.md`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/ruta-craft-osm/CHANGELOG.md). La versión 0.1.0 cambia el comportamiento respecto a 0.0.7 (distancia corregida, errores tipados, instrucciones agrupadas por calle).
+
+---
+
+## 5. Navegador (WebAssembly)
+
+`ruta-craft-osm/web` es el mismo motor C++ compilado a WebAssembly. Corre dentro de un **Web Worker** para no congelar la página y da exactamente las mismas respuestas que el motor nativo (las pruebas lo comparan byte a byte). Puedes probarlo en la **[demo en el navegador](./demo.html)**.
+
+```ts
+import { crearMotorWeb } from "ruta-craft-osm/web";
+
+const motor = await crearMotorWeb({ grafo: "/grafos/mi_zona.bin" });   // URL o bytes del grafo
+const ruta = await motor.calcular([[29.0656, -110.0564], [29.0620, -110.0590]], { optimizar: true });
+console.log(ruta.distancia_total_km, ruta.instrucciones);
+await motor.cerrar();
+```
+
+| | Node / Electron (`ruta-craft-osm`) | Navegador (`ruta-craft-osm/web`) |
+| :--- | :--- | :--- |
+| Motor | `cli.exe` nativo (un proceso) | `motor.wasm` (317 KB) en un Web Worker |
+| Grafo | Ruta de archivo | URL o `Uint8Array` |
+| Caché | Archivo JSON (`cachePath`) | En memoria: `exportarCache()` / `importarCache()` (guárdalo donde quieras, p. ej. IndexedDB) |
+| Optimizar 50 paradas en una ciudad | ~0.1 s (varios hilos) | ~0.5 s (un hilo) |
+| Errores | `ErrorRutaCraft` con `codigo` | Igual |
+
+`MotorWeb` tiene la misma forma que `MotorRutas`: `calcular()`, `cambiarGrafo()`, `exportarCache()`, `importarCache()` y `cerrar()`. Si un cálculo supera `timeoutMs` (30 s por defecto), el Worker se termina y el siguiente cálculo arranca uno nuevo.
+
+**Empaquetadores.** El Worker se crea con `new Worker(new URL("./worker.js", import.meta.url), { type: "module" })` y el módulo busca `motor.wasm` junto a `motor.mjs`, patrones que reconocen Vite, webpack 5 y esbuild. Si tu configuración los mueve, usa las opciones `wasmUrl` (dónde quedó `motor.wasm`) o `crearWorker` (cómo crear el Worker).
+
+**Sin Worker.** `cargarMotorWasm({ grafo })` crea el motor en el hilo actual con llamadas síncronas (`motor.calcular()` devuelve el resultado directamente). Sirve dentro de un Worker propio o en Node, donde también funciona.
+
+**Generar el grafo en el navegador.** `generarGrafo()` también funciona en la página: descarga la zona de Overpass y devuelve los bytes, que se pasan a `crearMotorWeb({ grafo: bytes })` o a `motor.cambiarGrafo(bytes)`. Ver [2. Generador de grafos](./2_GENERADOR_DE_GRAFOS.md).
+
+> [!NOTE]
+> El servidor debe servir `motor.wasm` con el tipo `application/wasm` (GitHub Pages, Vite, Netlify y la mayoría lo hacen). WebGPU no se usa: A\* es secuencial y con grafos de decenas de miles de nodos pasar los datos a la GPU costaría más que el cálculo, que tarda pocos milisegundos.

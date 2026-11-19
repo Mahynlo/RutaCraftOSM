@@ -1,5 +1,6 @@
 #pragma once
 #include "types.hpp"
+#include <algorithm>
 #include <cmath>
 
 namespace rutacraft {
@@ -37,6 +38,34 @@ inline float distancia_rapida_metros(const Coordenada& c1, const Coordenada& c2)
     double dx = (c2.lon - c1.lon) * std::cos(lat_media_rad) * METROS_POR_GRADO;
     double dy = (c2.lat - c1.lat) * METROS_POR_GRADO;
     return static_cast<float>(std::sqrt(dx * dx + dy * dy) * MARGEN_HEURISTICA);
+}
+
+// Heurística de A* con las posiciones de Grafo::preparar_plano: sin trigonometría por nodo.
+// Admisible por la misma razón que distancia_rapida_metros (escala x menor o igual, mismo margen).
+inline float distancia_plana(const PuntoPlano& a, const PuntoPlano& b) {
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    return std::sqrt(dx * dx + dy * dy) * static_cast<float>(MARGEN_HEURISTICA);
+}
+
+inline void Grafo::preparar_plano() {
+    plano.resize(coords.size());
+    if (coords.empty()) return;
+    double lat_min = coords[0].lat, lat_max = coords[0].lat, lon_min = coords[0].lon, lon_max = coords[0].lon;
+    for (const auto& c : coords) {
+        lat_min = std::min(lat_min, c.lat);
+        lat_max = std::max(lat_max, c.lat);
+        lon_min = std::min(lon_min, c.lon);
+        lon_max = std::max(lon_max, c.lon);
+    }
+    const double lat_extrema = std::max(std::abs(lat_min), std::abs(lat_max));
+    const double escala_x = std::cos(std::min(lat_extrema, 89.0) * DEG_TO_RAD) * METROS_POR_GRADO;
+    const double lat_centro = (lat_min + lat_max) * 0.5;
+    const double lon_centro = (lon_min + lon_max) * 0.5;
+    for (size_t i = 0; i < coords.size(); ++i) {
+        plano[i] = {static_cast<float>((coords[i].lon - lon_centro) * escala_x),
+                    static_cast<float>((coords[i].lat - lat_centro) * METROS_POR_GRADO)};
+    }
 }
 
 // Rumbo de a hacia b en grados (0 = norte, 90 = este, -90 = oeste). La diferencia de longitud se

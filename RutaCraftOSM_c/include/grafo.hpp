@@ -14,7 +14,7 @@ using json = nlohmann::json;
 
 // Arma un Grafo CSR a partir de aristas sueltas (formatos RCO1 y JSON).
 // Deja una sola arista por par (u, v): peso mínimo y el nombre de la primera aparición, igual
-// que formato_rco.deduplicar() en Python, de modo que las rutas no cambian.
+// que el generador de grafos (ruta-craft-osm/src/generador/rco2.ts), de modo que las rutas no cambian.
 class ConstructorGrafo {
 public:
     explicit ConstructorGrafo(size_t num_nodos) : aristas_(num_nodos) {}
@@ -73,7 +73,7 @@ public:
         return datos;
     }
 
-    // RCO2: arreglos contiguos que se copian en bloque (ver RutaCraftOSM/formato_rco.py)
+    // RCO2: arreglos contiguos que se copian en bloque (ver ruta-craft-osm/src/generador/rco2.ts)
     static bool cargar_rco2(const std::vector<char>& datos, Grafo& grafo) {
         struct Encabezado {
             char magic[4];
@@ -207,7 +207,17 @@ public:
     // Detecta el formato por su encabezado: RCO2, RCO1 o JSON
     static bool cargar(const std::filesystem::path& path, Grafo& grafo) {
         if (cargar_sin_indice(path, grafo)) {
-            grafo.preparar_indice_osm();
+            preparar(grafo);
+            return true;
+        }
+        grafo = Grafo{};
+        return false;
+    }
+
+    // Grafo ya leído en memoria (RCO2 o RCO1); es lo que usa la versión WebAssembly
+    static bool cargar_memoria(const std::vector<char>& datos, Grafo& grafo) {
+        if (cargar_binario(datos, grafo)) {
+            preparar(grafo);
             return true;
         }
         grafo = Grafo{};
@@ -215,10 +225,23 @@ public:
     }
 
 private:
-    static bool cargar_sin_indice(const std::filesystem::path& path, Grafo& grafo) {
-        const std::vector<char> datos = leer_archivo(path);
+    // Índices derivados que no se guardan en el archivo
+    static void preparar(Grafo& grafo) {
+        grafo.preparar_indice_osm();
+        grafo.preparar_plano();
+    }
+
+    static bool cargar_binario(const std::vector<char>& datos, Grafo& grafo) {
         if (datos.size() >= 4 && std::memcmp(datos.data(), "RCO2", 4) == 0) return cargar_rco2(datos, grafo);
         if (datos.size() >= 4 && std::memcmp(datos.data(), "RCO1", 4) == 0) return cargar_rco1(datos, grafo);
+        return false;
+    }
+
+    static bool cargar_sin_indice(const std::filesystem::path& path, Grafo& grafo) {
+        const std::vector<char> datos = leer_archivo(path);
+        if (datos.size() >= 4 && (std::memcmp(datos.data(), "RCO2", 4) == 0 || std::memcmp(datos.data(), "RCO1", 4) == 0)) {
+            return cargar_binario(datos, grafo);
+        }
         if (!datos.empty() && cargar_json(path, grafo)) return true;
 
         // Intentar cambiar extensión a .bin si se pasó .pkl o .graphml
