@@ -1,5 +1,8 @@
 // Paso final del build: deja el módulo WebAssembly junto al código ESM (dist/esm/wasm/) y marca
 // dist/esm como módulos ES. El módulo se compila con Emscripten (ver RutaCraftOSM_c/CMakeLists.txt).
+//
+// Sin el módulo solo avisa: el paquete sigue sirviendo para Node/Electron (motor nativo). Así `npm pack`
+// funciona en equipos sin Emscripten, como el release de AguaVP. La CI usa --estricto para el paquete completo.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

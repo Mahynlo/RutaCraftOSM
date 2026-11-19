@@ -37,7 +37,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && node scripts/copiar-wasm.mjs",
     "build:wasm": "emcmake cmake -S ../RutaCraftOSM_c -B ../RutaCraftOSM_c/build-wasm -DCMAKE_BUILD_TYPE=Release && cmake --build ../RutaCraftOSM_c/build-wasm",
-    "prepack": "npm run build && node scripts/copiar-wasm.mjs --estricto",
+    "prepack": "npm run build",
     "test": "npm run build && node --test \"test/*.test.*\"",
     "demo": "npm run build && node scripts/demo.cjs",
     "demo:web": "npm run build && node scripts/preparar-demo.mjs"

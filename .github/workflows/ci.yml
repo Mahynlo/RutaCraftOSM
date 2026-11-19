@@ -114,6 +114,7 @@ jobs:
         working-directory: ruta-craft-osm
         run: |
           npm install --no-fund --no-audit
+          npm run build && node scripts/copiar-wasm.mjs --estricto   # aquí el motor WebAssembly es obligatorio
           npm pack
           for f in package/bin/win32-x64/cli.exe package/bin/linux-x64/cli package/bin/darwin-x64/cli \
                    package/bin/darwin-arm64/cli package/bin/grafos/grafo_mazatan_villapesqueira.bin \
