@@ -24,4 +24,4 @@ Para generar el grafo de otra zona: `npx ruta-craft-osm generar --geojson zona.g
 Referencia completa de opciones, códigos de salida y formato del resultado:
 https://github.com/Mahynlo/RutaCraftOSM/blob/main/docs/3_MOTOR_CPP_RUTACRAFT.md
 
-Datos de los grafos: © colaboradores de OpenStreetMap (licencia ODbL).
+Licencia: el código es MIT (ver `LICENSE`). Datos de los grafos: © colaboradores de OpenStreetMap (licencia ODbL).

@@ -62,8 +62,8 @@
   "engines": {
     "node": ">=18"
   },
-  "author": "",
-  "license": "",
+  "author": "Mahynlo (https://github.com/Mahynlo)",
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^24.0.4",
     "typescript": "^5.8.3"
