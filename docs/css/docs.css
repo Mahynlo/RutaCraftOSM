@@ -575,3 +575,20 @@ body {
     padding: 0;
     color: inherit;
 }
+
+/* Enlaces a GitHub al final de cada documento */
+.doc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-top: 20px;
+    font-size: 0.85rem;
+}
+.doc-meta a {
+    color: var(--text-muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.doc-meta a:hover { color: var(--primary); }

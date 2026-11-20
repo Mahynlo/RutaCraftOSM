@@ -12,11 +12,13 @@ Genera rutas de múltiples puntos por calles reales, **sin conexión**, para Nod
 
 ## Instalación
 
+El paquete se publica en [GitHub Releases](https://github.com/Mahynlo/RutaCraftOSM/releases) (incluye los motores de Windows, Linux y macOS y el WebAssembly):
+
 ```powershell
-npm install ruta-craft-osm-0.2.0.tgz   # o "ruta-craft-osm": "file:ruta/al/paquete.tgz" en package.json
+npm install https://github.com/Mahynlo/RutaCraftOSM/releases/download/v0.2.0/ruta-craft-osm-0.2.0.tgz
 ```
 
-Requiere Node.js 18 o superior.
+También puedes descargar el `.tgz` y usar `"ruta-craft-osm": "file:ruta/al/ruta-craft-osm-0.2.0.tgz"` en `package.json`. Requiere Node.js 18 o superior.
 
 ## Uso
 

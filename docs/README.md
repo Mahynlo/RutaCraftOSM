@@ -29,6 +29,7 @@
    - Optimización del orden de las paradas (exacto y heurístico, matriz en varios hilos).
 
 4. [📦 Integración TypeScript, Electron y Navegador (`ruta-craft-osm`)](./4_INTEGRACION_TYPESCRIPT_ELECTRON.md)
+   - Instalación desde GitHub Releases o desde el código.
    - `calcularRuta()` (un proceso por llamada) y motor persistente `crearMotorRutas()`.
    - Optimización del orden de las paradas y errores tipados (`ErrorRutaCraft`).
    - Detección automática de empaquetado Electron (`app.asar.unpacked`).

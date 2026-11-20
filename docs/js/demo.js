@@ -12,6 +12,17 @@ const LADO_MAXIMO_GRADOS = 0.25;
 
 const $ = (id) => document.getElementById(id);
 const fmt = (x, d = 0) => x.toLocaleString("es-MX", { minimumFractionDigits: d, maximumFractionDigits: d });
+const esMovil = () => window.matchMedia("(max-width: 760px)").matches;
+
+// Icono de Font Awesome para cada acción que genera el motor (instrucciones.hpp)
+function iconoGiro(accion) {
+    if (accion.startsWith("Da vuelta en U")) return "fa-rotate-left";
+    if (accion.startsWith("Sigue recto")) return "fa-arrow-up";
+    const izquierda = accion.endsWith("izquierda");
+    if (accion.startsWith("Gira ligeramente")) return izquierda ? "fa-arrow-up rot-izq" : "fa-arrow-up rot-der";
+    if (accion.startsWith("Gira bruscamente")) return izquierda ? "fa-arrow-left rot-izq" : "fa-arrow-right rot-der";
+    return izquierda ? "fa-arrow-left" : "fa-arrow-right";
+}
 
 const mapa = L.map("mapa", { zoomControl: true }).setView([29.0615, -110.0567], 15);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -39,6 +50,7 @@ function actualizarBotones() {
     $("ejemplo").disabled = !listo;
     $("generar").disabled = !listo;
     $("descargar").disabled = !grafoActual || ocupado;
+    $("pista").hidden = !motor || paradas.length > 0;
 }
 
 function dibujarParadas(orden = null) {
@@ -53,12 +65,16 @@ function dibujarParadas(orden = null) {
             iconSize: [24, 24],
             iconAnchor: [12, 12],
         });
-        L.marker([lat, lon], { icon: icono }).addTo(capaParadas);
+        L.marker([lat, lon], { icon: icono, keyboard: false }).addTo(capaParadas);
         const li = document.createElement("li");
-        li.textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}${i === 0 ? " (inicio)" : ""}`;
+        li.innerHTML = `<span class="chip ${i === 0 ? "inicio" : ""}"></span><span class="coords"></span><span class="nota"></span>`;
+        li.children[0].textContent = String(visita + 1);
+        li.children[1].textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+        li.children[2].textContent = i === 0 ? "inicio" : "";
         const quitar = document.createElement("button");
         quitar.innerHTML = '<i class="fa-solid fa-xmark"></i>';
         quitar.title = "Quitar parada";
+        quitar.setAttribute("aria-label", `Quitar la parada ${i + 1}`);
         quitar.onclick = () => { paradas.splice(i, 1); limpiarRuta(); dibujarParadas(); };
         li.appendChild(quitar);
         lista.appendChild(li);
@@ -101,14 +117,18 @@ async function calcular() {
         lista.innerHTML = "";
         for (const i of r.instrucciones) {
             const li = document.createElement("li");
-            const calle = i.calle === "desconocida" ? "calle sin nombre" : i.calle;
-            li.innerHTML = `<span></span> <span class="dist"></span>`;
-            li.children[0].textContent = `${i.accion} en ${calle}`;
-            li.children[1].textContent = `(${fmt(i.distancia_m)} m)`;
+            const sinNombre = i.calle === "desconocida";
+            const enlace = i.accion.startsWith("Sigue recto") ? "por" : "en";
+            li.innerHTML = `<span class="giro" aria-hidden="true"><i class="fa-solid"></i></span>` +
+                `<div><div class="accion"></div><div class="dist"></div></div>`;
+            li.querySelector("i").className = `fa-solid ${iconoGiro(i.accion)}`;
+            li.querySelector(".accion").textContent = sinNombre ? i.accion : `${i.accion} ${enlace} ${i.calle}`;
+            li.querySelector(".dist").textContent = `${fmt(i.distancia_m)} m${sinNombre ? " · calle sin nombre" : ""}`;
             lista.appendChild(li);
         }
         $("sin-instrucciones").style.display = r.instrucciones.length ? "none" : "";
         estado(`Ruta calculada en el navegador en ${fmt(ms, 1)} ms (incluye el viaje al Worker).`, "ok");
+        if (esMovil()) $("tarjeta-resultado").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {
         estado(e.codigo === "SIN_RUTA"
             ? "No hay camino entre alguna de las paradas en este grafo (¿están fuera de la zona del grafo?)."
@@ -165,6 +185,7 @@ function descargarActual() {
 }
 
 mapa.on("click", (ev) => {
+    if (ocupado) return;
     paradas.push([Number(ev.latlng.lat.toFixed(6)), Number(ev.latlng.lng.toFixed(6))]);
     limpiarRuta();
     dibujarParadas();

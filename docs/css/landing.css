@@ -546,3 +546,18 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Pie de página: enlaces y licencia */
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 22px;
+    margin-bottom: 12px;
+}
+.footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+}
+.footer a:hover { color: var(--primary); }
+.footer p a { text-decoration: underline; text-underline-offset: 2px; }
