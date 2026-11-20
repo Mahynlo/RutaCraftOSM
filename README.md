@@ -1,5 +1,10 @@
 # 🚗 RutaCraftOSM
 
+[![CI](https://github.com/Mahynlo/RutaCraftOSM/actions/workflows/ci.yml/badge.svg)](https://github.com/Mahynlo/RutaCraftOSM/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Mahynlo/RutaCraftOSM?label=release)](https://github.com/Mahynlo/RutaCraftOSM/releases/latest)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](./LICENSE)
+[![Documentación](https://img.shields.io/badge/docs-mahynlo.github.io-0ea5e9)](https://mahynlo.github.io/RutaCraftOSM/)
+
 **RutaCraftOSM** es una librería ligera para **generar rutas de múltiples puntos** por calles reales, **sin conexión a internet**, dentro de una zona específica.
 
 Su objetivo es que una aplicación pueda calcular rutas en su propia zona de trabajo (un municipio, una ciudad, un conjunto de colonias) **sin instalar ni operar un servidor de ruteo** como OSRM, GraphHopper o Valhalla. No hace falta Docker, base de datos ni procesar el mapa de un país: basta con un archivo de grafo de pocos MB y el motor incluido en el paquete npm.
@@ -86,7 +91,7 @@ RutaCraftOSM/
 │   ├── src/web/                # Navegador: motor WebAssembly y Web Worker
 │   ├── src/generador/          # Generador de grafos (Overpass → RCO2)
 │   ├── src/cli.ts              # npx ruta-craft-osm generar | info | reordenar
-│   ├── bin/<plataforma>/       # Motor nativo por plataforma
+│   ├── bin/<plataforma>/       # Motor nativo por plataforma (lo coloca la CI; no está en git)
 │   ├── bin/grafos/             # Grafo RCO2 incluido (Mazatán - Villa Pesqueira)
 │   └── test/                   # Pruebas (node --test): motor, generador, WebAssembly, wrapper
 │
@@ -94,8 +99,26 @@ RutaCraftOSM/
 ├── RutaCraftOSM/               # 🐍 Versión original en Python (histórica, ya no se usa en el build)
 ├── Libretas/                   # 📓 Notebooks donde se pensó originalmente el proyecto
 ├── docs/                       # 📚 Documentación, visualizador y demo en el navegador
-└── .github/workflows/ci.yml    # 🤖 CI: compila y prueba en Windows, Linux, macOS y WebAssembly
+└── .github/workflows/         # 🤖 ci.yml (compila y prueba en Windows, Linux, macOS y WebAssembly) y release.yml
 ```
+
+---
+
+## 📥 Instalación
+
+Cada versión se publica en [GitHub Releases](https://github.com/Mahynlo/RutaCraftOSM/releases) ya compilada y probada:
+
+| Quiero… | Descarga |
+| :--- | :--- |
+| Usarla desde Node.js, Electron o el navegador | El paquete npm `ruta-craft-osm-<versión>.tgz` (motores de las 4 plataformas + WebAssembly) |
+| Usar solo la línea de comandos | `ruta-craft-osm-cli-<versión>-<plataforma>` (zip / tar.gz con el grafo de ejemplo) |
+| Integrar el WebAssembly a mano | `ruta-craft-osm-wasm-<versión>.zip` (`motor.mjs` + `motor.wasm`) |
+
+```powershell
+npm install https://github.com/Mahynlo/RutaCraftOSM/releases/download/v0.2.0/ruta-craft-osm-0.2.0.tgz
+```
+
+Requiere Node.js 18 o superior. En `package.json` queda como `"ruta-craft-osm": "https://github.com/Mahynlo/RutaCraftOSM/releases/download/v0.2.0/ruta-craft-osm-0.2.0.tgz"`.
 
 ---
 
@@ -103,27 +126,12 @@ RutaCraftOSM/
 
 ### 1. Generar el grafo de tu zona
 ```powershell
-cd ruta-craft-osm
-npm install
-npm run build
-npx ruta-craft-osm generar --geojson ../datos/mazatan_villapesqueira.geojson --salida mi_zona.bin
+npx ruta-craft-osm generar --geojson zona.geojson --salida mi_zona.bin
 # o un rectángulo: --caja sur,oeste,norte,este
 ```
-Detalles en [2. Generador de grafos](./docs/2_GENERADOR_DE_GRAFOS.md).
+El paquete trae como ejemplo el grafo de Mazatán y Villa Pesqueira, que se usa si no indicas otro. Detalles en [2. Generador de grafos](./docs/2_GENERADOR_DE_GRAFOS.md).
 
-### 2. Compilar el motor
-```powershell
-# Nativo
-cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build -DCMAKE_BUILD_TYPE=Release
-cmake --build RutaCraftOSM_c/build --config Release   # genera RutaCraftOSM_c/bin/cli.exe (o bin/cli)
-
-# WebAssembly (requiere Emscripten)
-emcmake cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build-wasm -DCMAKE_BUILD_TYPE=Release
-cmake --build RutaCraftOSM_c/build-wasm               # genera ruta-craft-osm/wasm/motor.mjs y motor.wasm
-```
-En Windows con MinGW también sirve el atajo `RutaCraftOSM_c\build.bat`. Después copia el binario a `ruta-craft-osm/bin/<plataforma>/` (por ejemplo `bin/win32-x64/cli.exe`) para actualizar el paquete npm. La CI genera además un paquete con los binarios de las cuatro plataformas y el módulo WebAssembly (artefacto `ruta-craft-osm-multiplataforma`).
-
-### 3. Usar en Node.js / Electron
+### 2. Usar en Node.js / Electron
 ```javascript
 const { calcularRuta, crearMotorRutas } = require('ruta-craft-osm');
 
@@ -138,7 +146,7 @@ const optimizada = await motor.calcular(paradas, { optimizar: true, regresarAlIn
 app.on('before-quit', () => motor.cerrar());
 ```
 
-### 4. Usar en el navegador
+### 3. Usar en el navegador
 ```javascript
 import { crearMotorWeb } from 'ruta-craft-osm/web';
 
@@ -150,7 +158,28 @@ Detalles en la [guía de integración](./docs/4_INTEGRACION_TYPESCRIPT_ELECTRON.
 
 ---
 
-## 🧪 Pruebas
+## 🛠️ Desarrollo
+
+### Compilar desde el código
+
+```powershell
+# Motor nativo (MinGW, MSVC, GCC o Clang)
+cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build -DCMAKE_BUILD_TYPE=Release
+cmake --build RutaCraftOSM_c/build --config Release   # genera RutaCraftOSM_c/bin/cli.exe (o bin/cli)
+
+# Motor WebAssembly (requiere Emscripten)
+emcmake cmake -S RutaCraftOSM_c -B RutaCraftOSM_c/build-wasm -DCMAKE_BUILD_TYPE=Release
+cmake --build RutaCraftOSM_c/build-wasm               # genera ruta-craft-osm/wasm/motor.mjs y motor.wasm
+
+# Paquete npm
+cd ruta-craft-osm
+npm install
+npm run build
+```
+
+En Windows con MinGW también sirve el atajo `RutaCraftOSM_c\build.bat`. Los binarios no se guardan en git: para armar un paquete local con tu motor, cópialo a `ruta-craft-osm/bin/<plataforma>/` (por ejemplo `bin/win32-x64/cli.exe`) antes de `npm pack`.
+
+### Pruebas
 
 ```powershell
 cd ruta-craft-osm
@@ -187,7 +216,9 @@ Para consultar la guía técnica completa, revisa la carpeta [`docs/`](./docs/RE
 * [⚙️ Motor de Rutas en C++ (`RutaCraftOSM_c`)](./docs/3_MOTOR_CPP_RUTACRAFT.md)
 * [📦 Integración TypeScript, Electron y Navegador](./docs/4_INTEGRACION_TYPESCRIPT_ELECTRON.md)
 * [⏱️ Rendimiento del Motor C++](./docs/5_RENDIMIENTO.md)
-* [🗺️ Visualizador de Rutas del Benchmark](./docs/visualizacion_ruta.html) · [▶ Demo en el navegador](./docs/demo.html)
+* [🗺️ Visualizador de Rutas del Benchmark](https://mahynlo.github.io/RutaCraftOSM/visualizacion_ruta.html) · [▶ Demo en el navegador](https://mahynlo.github.io/RutaCraftOSM/demo.html)
+
+También puedes leerla con diagramas y navegación por secciones en **[mahynlo.github.io/RutaCraftOSM](https://mahynlo.github.io/RutaCraftOSM/)**.
 
 La primera versión del proyecto, en Python, se conserva como referencia histórica en [`RutaCraftOSM/`](./RutaCraftOSM/README.md), junto con las [libretas](./Libretas/) donde se pensó originalmente.
 

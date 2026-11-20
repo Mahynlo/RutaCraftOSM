@@ -2,14 +2,17 @@
  * RutaCraftOSM - Lector de Documentación Markdown
  */
 
+// Orden de lectura (los mismos títulos que la barra lateral)
 const CHAPTERS = [
+    { file: 'README.md', title: 'Índice general' },
     { file: '1_ARQUITECTURA_Y_MIGRACION.md', title: '1. Arquitectura y Migración' },
-    { file: '2_GENERADOR_DE_GRAFOS.md', title: '2. Generador de grafos' },
+    { file: '2_GENERADOR_DE_GRAFOS.md', title: '2. Generador de Grafos' },
     { file: '3_MOTOR_CPP_RUTACRAFT.md', title: '3. Motor Nativo C++20' },
-    { file: '4_INTEGRACION_TYPESCRIPT_ELECTRON.md', title: '4. NPM y Electron' },
-    { file: '5_RENDIMIENTO.md', title: '5. Rendimiento del Motor' },
-    { file: 'README.md', title: 'Índice General (README)' }
+    { file: '4_INTEGRACION_TYPESCRIPT_ELECTRON.md', title: '4. NPM, Electron y Web' },
+    { file: '5_RENDIMIENTO.md', title: '5. Rendimiento del Motor' }
 ];
+
+const REPO_URL = 'https://github.com/Mahynlo/RutaCraftOSM';
 
 // Nombres que se muestran en la cabecera de los bloques de código
 const LANG_LABELS = {
@@ -249,6 +252,15 @@ function buildToc(root, docFile) {
     headings.forEach(h => tocObserver.observe(h));
 }
 
+// Desplazarse a la sección de la URL (doc.html?doc=X.md#seccion). Los enlaces del Markdown usan los
+// anclas de GitHub (con acentos); slugify() los quita, así que el mismo enlace sirve en ambos lados.
+function scrollToHash() {
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    if (!hash) return;
+    const el = document.getElementById(hash) || document.getElementById(slugify(hash));
+    if (el) el.scrollIntoView({ block: 'start' });
+}
+
 // Obtener nombre del archivo desde URL
 function getTargetDoc() {
     const params = new URLSearchParams(window.location.search);
@@ -387,6 +399,13 @@ async function loadDocument(docFile) {
             contentEl.appendChild(paginationEl);
         }
 
+        const meta = document.createElement('div');
+        meta.className = 'doc-meta';
+        meta.innerHTML = `
+            <a href="${REPO_URL}/edit/main/docs/${encodeURIComponent(docFile)}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-pen"></i> Editar esta página en GitHub</a>
+            <a href="${REPO_URL}/issues/new" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment"></i> Reportar un problema</a>`;
+        contentEl.appendChild(meta);
+
         // 9. Interceptar enlaces internos a .md
         contentEl.querySelectorAll('a').forEach(link => {
             const href = link.getAttribute('href');
@@ -397,9 +416,11 @@ async function loadDocument(docFile) {
                     if (target.includes('doc.html?doc=')) {
                         target = target.split('doc.html?doc=')[1];
                     }
-                    const cleanFile = target.replace(/^\.\//, '').split('#')[0];
-                    window.history.pushState(null, '', `doc.html?doc=${cleanFile}`);
-                    loadDocument(cleanFile);
+                    const [file, hash] = target.replace(/^\.\//, '').split('#');
+                    const cleanFile = file || docFile;
+                    window.history.pushState(null, '', `doc.html?doc=${cleanFile}${hash ? '#' + hash : ''}`);
+                    if (cleanFile === docFile && hash) scrollToHash();
+                    else loadDocument(cleanFile);
                 });
             }
         });
@@ -415,6 +436,7 @@ async function loadDocument(docFile) {
 
         const wrapper = document.getElementById('content-wrapper');
         if (wrapper) wrapper.scrollTop = 0;
+        scrollToHash();
 
     } catch (err) {
         loader.style.display = 'none';

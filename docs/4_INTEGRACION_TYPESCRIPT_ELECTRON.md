@@ -66,7 +66,7 @@ ruta-craft-osm/bin/
 El wrapper elige el binario con `process.platform` y `process.arch` (`plataformaActual()` devuelve, por ejemplo, `"win32-x64"`). Si el paquete no incluye esa plataforma, `calcularRuta()` y `motor.calcular()` se rechazan con un mensaje que la nombra. En Linux y macOS, si el binario perdió el permiso de ejecución (por ejemplo al descomprimir un zip), el wrapper lo restaura.
 
 > [!NOTE]
-> El repositorio solo versiona el binario de Windows (`bin/win32-x64/`), que es el que usa AguaVP. La CI compila y prueba las cuatro plataformas y publica un paquete con todas en el artefacto **`ruta-craft-osm-multiplataforma`**.
+> Los binarios no se guardan en git. La CI compila y prueba las cuatro plataformas, y el paquete de cada [release](https://github.com/Mahynlo/RutaCraftOSM/releases) las incluye todas.
 
 Si la ruta del paquete pasa por `app.asar` (Electron empaquetado en producción), el wrapper usa `app.asar.unpacked`, porque un ejecutable no puede lanzarse desde dentro del archivo `.asar`. electron-builder desempaqueta automáticamente todo el módulo cuando encuentra un ejecutable; para no depender de esa detección, se puede declarar explícitamente:
 
@@ -166,32 +166,30 @@ try {
 
 ---
 
-## 4. Instalación Local y Uso en Proyectos
+## 4. Instalación y Uso en Proyectos
 
-### Paso 1: Compilar y enlazar el paquete localmente
+### Paso 1: Instalar el paquete
+
+Desde [GitHub Releases](https://github.com/Mahynlo/RutaCraftOSM/releases), en la raíz de tu proyecto (Electron, Node o web):
+
 ```powershell
-# 1. Ubicarse en la carpeta del paquete
+npm install https://github.com/Mahynlo/RutaCraftOSM/releases/download/v0.2.0/ruta-craft-osm-0.2.0.tgz
+```
+
+El paquete ya trae los motores de Windows, Linux y macOS, el WebAssembly y el grafo de ejemplo.
+
+### Paso 2 (opcional): usar una versión compilada por ti
+
+Para probar cambios del motor o del wrapper sin publicar una versión:
+
+```powershell
 cd ruta-craft-osm
-
-# 2. Instalar dependencias de desarrollo y compilar TypeScript
 npm install
-npm run build
-
-# 3. (Opcional) Ejecutar las pruebas del wrapper
-npm test
-
-# 4. Registrar enlace global de npm
-npm link
+npm run build              # compila TypeScript (y copia el WebAssembly si lo compilaste)
+npm pack                   # crea ruta-craft-osm-<versión>.tgz
 ```
 
-> [!TIP]
-> Para instalarlo como archivo en lugar de con `npm link`, genera el paquete con `npm pack` (crea `ruta-craft-osm-<versión>.tgz`) y en la app usa `"ruta-craft-osm": "file:ruta/al/ruta-craft-osm-<versión>.tgz"` en `package.json`. Vuelve a generarlo cada vez que cambie el motor o el wrapper.
-
-### Paso 2: Usar en tu proyecto de Electron / Node.js
-```powershell
-# En la raíz de tu proyecto Electron
-npm link ruta-craft-osm
-```
+En la app usa `"ruta-craft-osm": "file:ruta/al/ruta-craft-osm-<versión>.tgz"` en `package.json`. Antes de `npm pack` copia tu `cli` compilado a `bin/<plataforma>/`, porque los binarios no están en git. `npm link` también funciona mientras desarrollas.
 
 ### Paso 3: Ejemplo de código en JavaScript / TypeScript
 ```javascript
@@ -277,7 +275,7 @@ const medidoresEnOrden = ruta.orden.map(i => medidores[i]);
 Con hasta 9 paradas el orden es el óptimo exacto; con más, una heurística (vecino más cercano + 2-opt + Or-opt) que nunca empeora el orden recibido. Una ruta de 50 paradas en toda la ciudad de Hermosillo se optimiza en ~0.1 s con el motor nativo (~0.5 s con WebAssembly). Detalles del algoritmo en [3. Motor C++](./3_MOTOR_CPP_RUTACRAFT.md#8-optimización-del-orden-de-las-paradas).
 
 > [!NOTE]
-> Los cambios de cada versión del paquete están en [`ruta-craft-osm/CHANGELOG.md`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/ruta-craft-osm/CHANGELOG.md). La versión 0.1.0 cambia el comportamiento respecto a 0.0.7 (distancia corregida, errores tipados, instrucciones agrupadas por calle).
+> Los cambios de cada versión del paquete están en [`ruta-craft-osm/CHANGELOG.md`](https://github.com/Mahynlo/RutaCraftOSM/blob/main/ruta-craft-osm/CHANGELOG.md). Si vienes de 0.0.7, la versión 0.1.0 cambió el comportamiento (distancia corregida, errores tipados, instrucciones agrupadas por calle); 0.2.0 es compatible con 0.1.0.
 
 ---
 

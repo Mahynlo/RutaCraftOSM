@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RutaCraftOSM - Rutas multi-parada sin conexión</title>
+    <meta name="description" content="Librería para calcular rutas de múltiples paradas por calles reales, sin conexión y sin servidor de ruteo: motor C++ nativo para Node/Electron y WebAssembly para el navegador, con grafos de OpenStreetMap.">
     
     <!-- Google Fonts & Font Awesome -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
@@ -18,30 +19,63 @@
 </head>
 <body>
 
-    <!-- Navbar -->
-    <header class="navbar">
-        <a href="index.html" class="nav-brand">
-            <i class="fa-solid fa-route"></i>
-            RutaCraftOSM
-        </a>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
 
-        <div class="nav-right">
-            <nav class="nav-links" id="nav-links">
-                <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="nav-link">Arquitectura</a>
-                <a href="doc.html?doc=2_GENERADOR_DE_GRAFOS.md" class="nav-link">Generador</a>
-                <a href="doc.html?doc=3_MOTOR_CPP_RUTACRAFT.md" class="nav-link">Motor C++</a>
-                <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="nav-link">NPM / Electron</a>
-                <a href="doc.html?doc=5_RENDIMIENTO.md" class="nav-link">Rendimiento</a>
-                <a href="demo.html" class="nav-link">Demo web</a>
-                <a href="visualizacion_ruta.html" class="btn-cta">
-                    <i class="fa-solid fa-map-location-dot"></i>
-                    Visualizador Interactivo
+    <!-- Navbar -->
+    <header class="navbar" id="navbar">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-brand" aria-label="RutaCraftOSM, inicio">
+                <i class="fa-solid fa-route"></i>
+                RutaCraftOSM
+                <span class="nav-version">v0.2.0</span>
+            </a>
+
+            <nav class="nav-links" id="nav-links" aria-label="Principal">
+                <div class="nav-dropdown" id="nav-docs">
+                    <button class="nav-link nav-dropdown-btn" type="button" aria-expanded="false" aria-controls="menu-docs">
+                        <i class="fa-solid fa-book-open nav-movil-icono"></i> Documentación <i class="fa-solid fa-chevron-down nav-flecha"></i>
+                    </button>
+                    <div class="nav-menu" id="menu-docs">
+                        <a href="doc.html?doc=README.md" class="nav-menu-item">
+                            <i class="fa-solid fa-book"></i>
+                            <span><strong>Índice general</strong><small>Mapa de toda la documentación</small></span>
+                        </a>
+                        <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="nav-menu-item">
+                            <i class="fa-solid fa-sitemap"></i>
+                            <span><strong>1. Arquitectura</strong><small>Propósito, alcance y capas</small></span>
+                        </a>
+                        <a href="doc.html?doc=2_GENERADOR_DE_GRAFOS.md" class="nav-menu-item">
+                            <i class="fa-solid fa-map"></i>
+                            <span><strong>2. Generador de grafos</strong><small>De OpenStreetMap a RCO2</small></span>
+                        </a>
+                        <a href="doc.html?doc=3_MOTOR_CPP_RUTACRAFT.md" class="nav-menu-item">
+                            <i class="fa-solid fa-microchip"></i>
+                            <span><strong>3. Motor C++</strong><small>A*, KD-Tree y referencia de la CLI</small></span>
+                        </a>
+                        <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md" class="nav-menu-item">
+                            <i class="fa-brands fa-node-js"></i>
+                            <span><strong>4. NPM, Electron y Web</strong><small>Instalación y API</small></span>
+                        </a>
+                        <a href="doc.html?doc=5_RENDIMIENTO.md" class="nav-menu-item">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span><strong>5. Rendimiento</strong><small>Tiempos medidos</small></span>
+                        </a>
+                    </div>
+                </div>
+                <a href="visualizacion_ruta.html" class="nav-link"><i class="fa-solid fa-map-location-dot nav-movil-icono"></i> Visualizador</a>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM/releases" class="nav-link"><i class="fa-solid fa-download nav-movil-icono"></i> Descargas</a>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM" class="nav-link nav-github" target="_blank" rel="noopener noreferrer" aria-label="Repositorio en GitHub" title="Repositorio en GitHub">
+                    <i class="fa-brands fa-github"></i><span class="nav-movil-texto"> GitHub</span>
+                </a>
+                <a href="demo.html" class="btn-cta">
+                    <i class="fa-solid fa-play"></i>
+                    Probar la demo
                 </a>
             </nav>
 
             <div class="nav-actions">
-                <button class="btn-theme-toggle" aria-label="Cambiar Tema"></button>
-                <button class="btn-hamburger" id="nav-toggle" onclick="toggleNav()" aria-label="Abrir Menú">
+                <button class="btn-theme-toggle" aria-label="Cambiar tema"></button>
+                <button class="btn-hamburger" id="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav-links">
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
@@ -49,12 +83,18 @@
     </header>
 
     <!-- Main Content -->
-    <main class="container">
+    <main class="container" id="contenido">
         
         <!-- Hero Section -->
         <section class="hero">
+            <a class="hero-release" href="https://github.com/Mahynlo/RutaCraftOSM/releases/tag/v0.2.0">
+                <span class="hero-release-tag">Nuevo</span>
+                v0.2.0: motor en el navegador y generador de grafos en TypeScript
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
             <div class="hero-badges">
                 <span class="badge-hero"><i class="fa-solid fa-microchip"></i> C++20</span>
+                <span class="badge-hero"><i class="fa-solid fa-globe"></i> WebAssembly</span>
                 <span class="badge-hero"><i class="fa-solid fa-map"></i> OpenStreetMap</span>
                 <span class="badge-hero"><i class="fa-solid fa-diagram-project"></i> A* + KD-Tree</span>
                 <span class="badge-hero"><i class="fa-solid fa-wifi"></i> Sin conexión</span>
@@ -68,17 +108,13 @@
                     <i class="fa-solid fa-play"></i>
                     Probar en el navegador
                 </a>
-                <a href="visualizacion_ruta.html" class="btn-secondary">
-                    <i class="fa-solid fa-map-location-dot"></i>
-                    Visualizador del benchmark
-                </a>
-                <a href="doc.html?doc=1_ARQUITECTURA_Y_MIGRACION.md" class="btn-secondary">
+                <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md#4-instalación-y-uso-en-proyectos" class="btn-secondary">
                     <i class="fa-solid fa-book-open"></i>
-                    Explorar Documentación
+                    Empezar a usarla
                 </a>
                 <a href="https://github.com/Mahynlo/RutaCraftOSM" target="_blank" rel="noopener noreferrer" class="btn-secondary">
                     <i class="fa-brands fa-github"></i>
-                    Repositorio GitHub
+                    Ver en GitHub
                 </a>
             </div>
         </section>
@@ -113,7 +149,7 @@
             <div class="section-head">
                 <div>
                     <h2><i class="fa-solid fa-gauge-high"></i> Rendimiento del motor C++20</h2>
-                    <p>Ruta municipal de 23 paradas · medido el 2026-10-15</p>
+                    <p>Motor nativo · medido el 2026-11-19 en un Ryzen 7 3750H</p>
                 </div>
                 <a href="doc.html?doc=5_RENDIMIENTO.md" class="section-link">
                     Ver benchmark completo <i class="fa-solid fa-arrow-right"></i>
@@ -123,23 +159,23 @@
             <div class="bench-grid">
                 <div class="stat-box">
                     <div class="stat-label">Motor persistente</div>
-                    <div class="stat-num stat-cpp">0.54 ms</div>
-                    <div class="stat-note">Por ruta, grafo ya cargado</div>
+                    <div class="stat-num stat-cpp">0.77 ms</div>
+                    <div class="stat-note">Ruta de 23 paradas, grafo ya cargado</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">calcularRuta()</div>
-                    <div class="stat-num stat-primary">~30–60 ms</div>
+                    <div class="stat-num stat-primary">~30–50 ms</div>
                     <div class="stat-note">Incluye arrancar cli.exe y cargar el grafo</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Ciudad de Hermosillo</div>
-                    <div class="stat-num stat-python">2–3 ms</div>
+                    <div class="stat-num stat-python">1.6–3 ms</div>
                     <div class="stat-note">Por ruta en un grafo de 75 mil nodos</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Consumo de RAM</div>
                     <div class="stat-num stat-purple">8 MB</div>
-                    <div class="stat-note">19 MB con el grafo de Hermosillo</div>
+                    <div class="stat-note">20 MB con el grafo de Hermosillo</div>
                 </div>
             </div>
         </section>
@@ -198,6 +234,15 @@
                 <div class="doc-link-text">Leer guía <i class="fa-solid fa-arrow-right"></i></div>
             </a>
 
+            <a href="https://github.com/Mahynlo/RutaCraftOSM/releases" class="doc-card doc-card-alt">
+                <div>
+                    <div class="doc-icon icon-gray"><i class="fa-solid fa-download"></i></div>
+                    <div class="doc-title">Descargas</div>
+                    <div class="doc-desc">Cada versión publicada: el paquete npm con los motores de las 4 plataformas, el CLI con el grafo de ejemplo y el módulo WebAssembly.</div>
+                </div>
+                <div class="doc-link-text">Ir a Releases <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
         </div>
 
         <!-- Quick Code Example -->
@@ -214,7 +259,10 @@
         <div class="code-showcase">
             <div class="code-window-header">
                     <div class="code-tabs">
-                        <button class="code-tab-btn active" data-tab="ts" onclick="switchCodeTab('ts')">
+                        <button class="code-tab-btn active" data-tab="instalar" onclick="switchCodeTab('instalar')">
+                            <i class="fa-solid fa-download"></i> Instalar
+                        </button>
+                        <button class="code-tab-btn" data-tab="ts" onclick="switchCodeTab('ts')">
                             <i class="fa-brands fa-js"></i> TypeScript (ESM)
                         </button>
                         <button class="code-tab-btn" data-tab="cjs" onclick="switchCodeTab('cjs')">
@@ -232,8 +280,18 @@
                 </button>
             </div>
 
+            <!-- Tab 0: Instalación -->
+            <pre class="code-panel active" id="panel-instalar"><code><span class="token-com"># Paquete npm desde GitHub Releases (Node 18+, Electron y navegador; incluye los motores de las 4 plataformas)</span>
+<span class="token-cmd">npm install</span> https://github.com/Mahynlo/RutaCraftOSM/releases/download/v0.2.0/ruta-craft-osm-0.2.0.tgz
+
+<span class="token-com"># Generar el grafo de tu zona desde OpenStreetMap</span>
+<span class="token-cmd">npx ruta-craft-osm generar</span> --geojson zona.geojson --salida mi_zona.bin
+
+<span class="token-com"># ¿Solo la línea de comandos? Descarga el CLI de tu plataforma (incluye un grafo de ejemplo):</span>
+<span class="token-com"># https://github.com/Mahynlo/RutaCraftOSM/releases/latest</span></code></pre>
+
             <!-- Tab 1: TypeScript -->
-            <pre class="code-panel active" id="panel-ts"><code><span class="token-kw">import</span> { <span class="token-fn">calcularRuta</span>, <span class="token-type">RespuestaRutaCompleta</span> } <span class="token-kw">from</span> <span class="token-str">'ruta-craft-osm'</span>;
+            <pre class="code-panel" id="panel-ts"><code><span class="token-kw">import</span> { <span class="token-fn">calcularRuta</span>, <span class="token-type">RespuestaRutaCompleta</span> } <span class="token-kw">from</span> <span class="token-str">'ruta-craft-osm'</span>;
 
 <span class="token-com">// Cálculo de ruta multi-parada con el motor C++ nativo</span>
 <span class="token-kw">const</span> respuesta: <span class="token-type">RespuestaRutaCompleta</span> = <span class="token-kw">await</span> <span class="token-fn">calcularRuta</span>({
@@ -308,10 +366,44 @@ app.<span class="token-fn">on</span>(<span class="token-str">'before-quit'</span
 }</code></pre>
         </div>
 
-        <footer class="footer">
-            RutaCraftOSM &bull; Rutas multi-parada sin conexión con datos de OpenStreetMap &bull; 2026
-        </footer>
     </main>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <a href="index.html" class="nav-brand"><i class="fa-solid fa-route"></i> RutaCraftOSM</a>
+                <p>Rutas de múltiples paradas por calles reales, sin conexión y sin servidor de ruteo. Motor C++ nativo y WebAssembly.</p>
+                <a class="footer-github" href="https://github.com/Mahynlo/RutaCraftOSM" target="_blank" rel="noopener noreferrer">
+                    <i class="fa-brands fa-github"></i> Mahynlo/RutaCraftOSM
+                </a>
+            </div>
+            <nav class="footer-col" aria-label="Documentación">
+                <h3>Documentación</h3>
+                <a href="doc.html?doc=README.md">Índice general</a>
+                <a href="doc.html?doc=2_GENERADOR_DE_GRAFOS.md">Generador de grafos</a>
+                <a href="doc.html?doc=3_MOTOR_CPP_RUTACRAFT.md">Motor C++ y CLI</a>
+                <a href="doc.html?doc=4_INTEGRACION_TYPESCRIPT_ELECTRON.md">NPM, Electron y Web</a>
+                <a href="doc.html?doc=5_RENDIMIENTO.md">Rendimiento</a>
+            </nav>
+            <nav class="footer-col" aria-label="Herramientas">
+                <h3>Herramientas</h3>
+                <a href="demo.html">Demo en el navegador</a>
+                <a href="visualizacion_ruta.html">Visualizador del benchmark</a>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM/releases">Descargas</a>
+            </nav>
+            <nav class="footer-col" aria-label="Proyecto">
+                <h3>Proyecto</h3>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM/blob/main/ruta-craft-osm/CHANGELOG.md">Cambios por versión</a>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM/issues">Reportar un problema</a>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM/blob/main/LICENSE">Licencia MIT</a>
+                <a href="https://github.com/Mahynlo/RutaCraftOSM/tree/main/RutaCraftOSM">Versión original en Python</a>
+            </nav>
+        </div>
+        <div class="footer-bottom">
+            <span>&copy; 2026 Mahynlo · Código bajo licencia MIT</span>
+            <span>Datos de mapas &copy; colaboradores de <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> (ODbL)</span>
+        </div>
+    </footer>
 
     <!-- Modular Script -->
     <script src="js/landing.js"></script>
