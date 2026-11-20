@@ -2,13 +2,59 @@
  * RutaCraftOSM - Landing Page Logic
  */
 
-function toggleNav() {
-    const nav = document.getElementById('nav-links');
-    const btn = document.getElementById('nav-toggle');
-    if (!nav || !btn) return;
-    const isOpen = nav.classList.toggle('open');
-    btn.innerHTML = isOpen ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
+// ------------------------------------------------------------------
+// Navbar: menú móvil, menú de documentación y sombra al desplazarse
+// ------------------------------------------------------------------
+const nav = document.getElementById('nav-links');
+const navToggle = document.getElementById('nav-toggle');
+const docsMenu = document.getElementById('nav-docs');
+const docsBtn = docsMenu ? docsMenu.querySelector('.nav-dropdown-btn') : null;
+
+function setNavOpen(open) {
+    if (!nav || !navToggle) return;
+    nav.classList.toggle('open', open);
+    navToggle.setAttribute('aria-expanded', String(open));
+    navToggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+    navToggle.innerHTML = open ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
+    if (!open) setDocsOpen(false);
 }
+
+function setDocsOpen(open) {
+    if (!docsMenu || !docsBtn) return;
+    docsMenu.classList.toggle('abierto', open);
+    docsBtn.setAttribute('aria-expanded', String(open));
+}
+
+navToggle?.addEventListener('click', () => setNavOpen(!nav.classList.contains('open')));
+docsBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setDocsOpen(!docsMenu.classList.contains('abierto'));
+});
+
+// En escritorio el menú de documentación también se abre al pasar el mouse
+const conMouse = window.matchMedia('(hover: hover) and (min-width: 861px)');
+let cerrarDocs = null;
+docsMenu?.addEventListener('mouseenter', () => { if (conMouse.matches) { clearTimeout(cerrarDocs); setDocsOpen(true); } });
+docsMenu?.addEventListener('mouseleave', () => { if (conMouse.matches) cerrarDocs = setTimeout(() => setDocsOpen(false), 150); });
+
+// Cerrar al hacer clic fuera, al elegir un enlace o con Escape
+document.addEventListener('click', (e) => {
+    if (docsMenu && !docsMenu.contains(e.target)) setDocsOpen(false);
+    if (nav && nav.classList.contains('open') && !e.target.closest('#navbar')) setNavOpen(false);
+});
+nav?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setNavOpen(false)));
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (docsMenu?.classList.contains('abierto')) { setDocsOpen(false); docsBtn.focus(); }
+    else if (nav?.classList.contains('open')) { setNavOpen(false); navToggle.focus(); }
+});
+window.matchMedia('(min-width: 861px)').addEventListener('change', (e) => { if (e.matches) setNavOpen(false); });
+
+// Sombra en la barra cuando la página no está arriba
+const navbar = document.getElementById('navbar');
+const marcarScroll = () => navbar?.classList.toggle('con-sombra', window.scrollY > 4);
+window.addEventListener('scroll', marcarScroll, { passive: true });
+marcarScroll();
 
 // Cambiar pestaña de código
 function switchCodeTab(tabId) {
@@ -50,17 +96,3 @@ async function copyActiveCode() {
         console.warn('Error al copiar:', err);
     }
 }
-
-// Cerrar menú al hacer clic en un enlace en móvil
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-link, .btn-cta').forEach(link => {
-        link.addEventListener('click', () => {
-            const nav = document.getElementById('nav-links');
-            const btn = document.getElementById('nav-toggle');
-            if (nav && nav.classList.contains('open')) {
-                nav.classList.remove('open');
-                if (btn) btn.innerHTML = '<i class="fa-solid fa-bars"></i>';
-            }
-        });
-    });
-});
